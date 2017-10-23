@@ -1,7 +1,4 @@
 Describe 'DHCP Service settings' {
-    Write-Log -info -Message "Will use session details:"
-    $POVFPSSession
-    $POVFConfiguration.DHCPServerDNSCredentials
     Context 'Verify service status' {
       it "Service should be running" {
         (Invoke-Command -Session $POVFPSSession -ScriptBlock {
