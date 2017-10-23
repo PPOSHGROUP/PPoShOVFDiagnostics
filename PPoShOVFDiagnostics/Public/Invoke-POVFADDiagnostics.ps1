@@ -1,45 +1,35 @@
 function Invoke-POVFADDiagnostics {
     <#
       .SYNOPSIS
-      Describe purpose of "Invoke-POVFADDiagnostics" in 1-2 sentences.
+      Invoke OVF ActiveDirectory Diagnostics tests
   
       .DESCRIPTION
-      Add a more complete description of what the function does.
+      Will run Pester tests from Diagnostics folder. If configuration variable is needed, save it to POVFConfiguration parameter.
   
       .PARAMETER POVFConfiguration
-      Describe parameter -POVFConfiguration.
+      PSCustom Object with configuration details needed for pester tests. If not provided will use default from module's Configuration folder.
   
       .PARAMETER DiagnosticsFolder
-      Describe parameter -DiagnosticsFolder.
+      Location where Simple and Comprehensive tests are located. If not provided will use default from module's Diagnostic folder.
   
       .PARAMETER WriteToEventLog
-      Describe parameter -WriteToEventLog.
+      If enabled will write resultes to EventLog.
   
       .PARAMETER EventSource
-      Describe parameter -EventSource.
+      EventSource to be used when event log entries are generated.
   
       .PARAMETER EventBaseID
-      Describe parameter -EventBaseID.
+      Base ID to pass to Write-pOVFPesterEventLog
+      Success tests will be written to EventLog Application with MySource as source and EventIDBase +1.
+      Errors tests will be written to EventLog Application with MySource as source and EventIDBase +2.
   
       .PARAMETER OutputFolder
-      Describe parameter -OutputFolder.
+      Location where NUnit xml with Pester results will be stored
   
       .EXAMPLE
-      Invoke-POVFADDiagnostics -POVFConfiguration Value -DiagnosticsFolder Value -WriteToEventLog -EventSource Value -EventBaseID Value -OutputFolder Value
-      Describe what this call does
-  
-      .NOTES
-      Place additional notes here.
-  
-      .LINK
-      URLs to related sites
-      The first link is opened by Get-Help -Online Invoke-POVFADDiagnostics
-  
-      .INPUTS
-      List of input types that are accepted by this function.
-  
-      .OUTPUTS
-      List of output types produced by this function.
+      $configuration  = Get-ConfigurationData -ConfigurationPath c:\someconfig.json -OutputType PSObject
+      Invoke-POVFADDiagnostics -POVFConfiguration $configuration -DiagnosticsFolder c:\DiagnosticTests -WriteToEventLog -EventSource MyTests -EventBaseID 1000 -OutputFolder c:\DiagnosticResults
+      
     #>
    
     [CmdletBinding()]
