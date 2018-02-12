@@ -58,22 +58,4 @@ Describe 'Active Directory services' {
       }
     }
   }
-  Context 'Verify DHCP servers' {
-    it 'DHCP servers topology match configuration file' {
-      $compArrayDHCPfromAD = (Get-ADObject -SearchBase 'cn=configuration,dc=objectivity,dc=co,dc=uk' -Filter "objectclass -eq 'dhcpclass' -AND Name -ne 'dhcproot'" ).Name
-      $compArrayDHCPfromConfig = $POVFConfiguration.DHCPServers -split ','
-      Compare-Object -ReferenceObject $compArrayDHCPfromAD -DifferenceObject $compArrayDHCPfromConfig | should beNullOrEmpty
-    }
-    Foreach ($dhcp in $POVFConfiguration.DHCPServers) {
-
-      it "DHCP {$dhcp} is recheable" {
-        Test-Connection $dhcp -Count 1 -ErrorAction SilentlyContinue |
-        Should be $true
-      }
-      it "DHCP {$dhcp} leases IPs" {
-        Get-DhcpServerv4FreeIPAddress -ComputerName $dhcp -ScopeId (Get-DhcpServerv4Scope -ComputerName $dhcp)[0].ScopeId |
-        Should be $true
-      }
-    }
-  }
 }

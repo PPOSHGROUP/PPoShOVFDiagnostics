@@ -18,7 +18,7 @@ function Invoke-POVFADDiagnostics {
       .PARAMETER EventSource
       EventSource to be used when event log entries are generated.
   
-      .PARAMETER EventBaseID
+      .PARAMETER EventIDBase
       Base ID to pass to Write-pOVFPesterEventLog
       Success tests will be written to EventLog Application with MySource as source and EventIDBase +1.
       Errors tests will be written to EventLog Application with MySource as source and EventIDBase +2.
@@ -28,7 +28,7 @@ function Invoke-POVFADDiagnostics {
   
       .EXAMPLE
       $configuration  = Get-ConfigurationData -ConfigurationPath c:\someconfig.json -OutputType PSObject
-      Invoke-POVFADDiagnostics -POVFConfiguration $configuration -DiagnosticsFolder c:\DiagnosticTests -WriteToEventLog -EventSource MyTests -EventBaseID 1000 -OutputFolder c:\DiagnosticResults
+      Invoke-POVFADDiagnostics -POVFConfiguration $configuration -DiagnosticsFolder c:\DiagnosticTests -WriteToEventLog -EventSource MyTests -EventIDBase 1000 -OutputFolder c:\DiagnosticResults
       
     #>
    
@@ -59,7 +59,7 @@ function Invoke-POVFADDiagnostics {
       [Parameter(Mandatory=$false,
       ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
       [int32]
-      $EventBaseID,
+      $EventIDBase,
   
       [Parameter(Mandatory=$false,HelpMessage='Destination folder for reports',
       ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
@@ -91,7 +91,7 @@ function Invoke-POVFADDiagnostics {
       if($PSBoundParameters.ContainsKey('WriteToEventLog')){
         $pOVFTestsParams.WriteToEventLog = $true
         $pOVFTestsParams.EventSource = $EventSource
-        $pOVFTestsParams.EventBaseID = $EventBaseID
+        $pOVFTestsParams.EventIDBase = $EventIDBase
       }
       if($PSBoundParameters.ContainsKey('OutputFolder')){
         $pOVFTestsParams.OutputFolder = $OutputFolder
