@@ -97,7 +97,7 @@ function Invoke-POVFDHCPDiagnostics {
 
     [Parameter(Mandatory=$false,HelpMessage='Tag for Pester ',
     ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-    [ValidateSet('Service','ScopeAndReservation')]
+    [ValidateSet('Service','ScopeAndReservation','Configuration','Reservations')]
     [string[]]
     $Tag
     
