@@ -1,8 +1,7 @@
-param(
+param (
   $POVFPSSession,
   $POVFConfigurationReservations,
   $POVFCurrentReservations
-
 )
 
 Describe "DHCP Reservations Settings on Server {$($POVFConfigurationReservations.ComputerName)}" -Tags Reservations,Configuration {

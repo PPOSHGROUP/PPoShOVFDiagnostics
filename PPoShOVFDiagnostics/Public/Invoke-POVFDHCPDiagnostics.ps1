@@ -39,7 +39,9 @@ function Invoke-POVFDHCPDiagnostics {
       .EXAMPLE
       $configuration  = Get-ConfigurationData -ConfigurationPath c:\someconfig.json -OutputType PSObject
       Invoke-POVFDHCPDiagnostics -POVFConfiguration $configuration -DiagnosticsFolder c:\DiagnosticTests -WriteToEventLog -EventSource MyTests -EventIDBase 1000 -OutputFolder c:\DiagnosticResults
-      
+      #Invoke-POVFDHCPDiagnostics -POVFConfiguration $dhcpconfig -DiagnosticsFolder $dhcpDiagFolder -Show All -Credential $creds  -WriteToEventLog -EventSource POVFDHCP -EventIDBase 1000 -OutputFolder 'C:\AdminTools\Newfolder'
+#Invoke-POVFDHCPDiagnostics -POVFConfiguration $dhcpconfig -DiagnosticsFolder $dhcpDiagFolder -Show All -Credential $creds  -WriteToEventLog -EventSource POVFDHCP -EventIDBase 1000 
+#Invoke-POVFDHCPDiagnostics -POVFConfiguration $dhcpconfig -DiagnosticsFolder $dhcpDiagFolder -Show All -Credential $creds -TestType Comprehensive -Tag ScopeAndReservation
   #>
    
   [CmdletBinding()]
@@ -48,8 +50,7 @@ function Invoke-POVFDHCPDiagnostics {
     [Parameter(Mandatory=$false,HelpMessage='Configuration as PSCustomObject',
     ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
     [System.String]
-    [ValidateScript({Test-Path -Path $_ -PathType Container})]
-    $POVFConfigurationFolder,
+    $POVFConfiguration,
   
     [Parameter(Mandatory=$false, HelpMessage='Folder with Pester tests',
     ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
