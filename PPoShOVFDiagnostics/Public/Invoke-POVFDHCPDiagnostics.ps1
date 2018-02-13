@@ -47,8 +47,9 @@ function Invoke-POVFDHCPDiagnostics {
   (
     [Parameter(Mandatory=$false,HelpMessage='Configuration as PSCustomObject',
     ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
-    [PSCustomObject]
-    $POVFConfiguration,
+    [System.String]
+    [ValidateScript({Test-Path -Path $_ -PathType Container})]
+    $POVFConfigurationFolder,
   
     [Parameter(Mandatory=$false, HelpMessage='Folder with Pester tests',
     ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
@@ -88,11 +89,20 @@ function Invoke-POVFDHCPDiagnostics {
     [System.Management.Automation.Credential()][System.Management.Automation.PSCredential]
     $Credential,
 
-    [Parameter(Mandatory=$false,HelpMessage='Show Pester Tests on console',
+    [Parameter(Mandatory=$false,HelpMessage='Tag for Pester ',
     ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
     [ValidateSet('Simple','Comprehensive')]
-    [String[]]
-    $TestType = @('Simple', 'Comprehensive')
+    [string[]]
+    $TestType = @('Simple','Comprehensive'),
+
+    [Parameter(Mandatory=$false,HelpMessage='Tag for Pester ',
+    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [ValidateSet('Service','ScopeAndReservation')]
+    [string[]]
+    $Tag
+    
+
+
 
     #$JEAEndpoint
   )
@@ -110,6 +120,9 @@ function Invoke-POVFDHCPDiagnostics {
     }
     if($PSBoundParameters.ContainsKey('Show')){
       $pOVFTestParams.Show = $Show
+    }
+    if($PSBoundParameters.ContainsKey('Tag')){
+      $pOVFTestParams.Tag = $Tag
     }
     #endregion
     #region select Root folder tests
@@ -130,33 +143,14 @@ function Invoke-POVFDHCPDiagnostics {
     }
     #endregion
     #region param POVFPSSession - Remote Session Params
-    $POVFPSSessionParams = @{ 
-      ComputerName = $paramPOVFConfiguration.ComputerName
-    }
-    #if($PSBoundParameters.ContainsKey('JEAEndpoint')){
-    #$POVFPSSessionParams.ConfigurationName = $JEAEndpoint
-    #}
-    if($PSBoundParameters.ContainsKey('Credential')){
-      $POVFPSSessionParams.Credential = $Credential
-      Write-Log -Info -Message "Will use {$($Credential.UserName)} to create PSSession to computer {$($POVFPSSessionParams.ComputerName)}"
-    }
-    else{
-      Write-Log -Info -Message "Will use current user Credential {$($ENV:USERNAME)} to create PSSession to computer {$($POVFPSSessionParams.ComputerName)}"
-    }
-    $POVFPSSession = New-PSSession @POVFPSSessionParams -ErrorAction SilentlyContinue
-    if ($POVFPSSession) { 
-      Write-Log -Info -Message "Created PSSession to computer {$($POVFPSSession.ComputerName)}"
-    }
-    else {
-      Write-Log -Error -Message "Unable to create PSSession to computer {$(POVFPSSession.ComputerName)}. Aborting!"
-      break
-    }
+    $POVFPSSession = New-POVFRemoteSession -ComputerName $POVFConfiguration.ComputerName -Credential $Credential
     #endregion
     #endregion
     #region Invoke tests
     $pOVFTestParams.POVFTestFileParameters =@{ 
       POVFPSSession = $POVFPSSession
       POVFConfiguration = $paramPOVFConfiguration
+      POVFCredential = $Credential
     }
     foreach ($test in $TestType) {
       $testDirectory = Join-Path -Path $paramDiagnosticFolder -ChildPath $test 
@@ -165,15 +159,12 @@ function Invoke-POVFDHCPDiagnostics {
         continue
       }
       foreach ($file in (Get-ChildItem -path $testDirectory -filter *.Tests.ps1)){
-        Invoke-POVFTest @pOVFTestParams
+        Invoke-POVFTest @pOVFTestParams -POVFTestFile $file.FullName
       }
     }
     #endregion
   }
   end{
-    if ($POVFPSSession) { 
-      $POVFPSSession | Remove-PSSession
-      Write-Log -Info -Message "Removed PSSession to computer {$($POVFPSSession.ComputerName)}"
-    }
+    Get-PSSession | Remove-PSSession -ErrorAction SilentlyContinue   
   }
 }
