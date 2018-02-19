@@ -1,26 +1,25 @@
 param(
-    $PSSession,
-    $NodeConfiguration,
-    $ClusterConfiguration
+    $POVFPSSession,
+    $POVFNodeConfiguration,
+    $POVFClusterConfiguration
 
 )
 
-
-Describe "Verifying Cluster {$($ClusterConfiguration.ClusterName)} Operational Status" {
+Describe "Verifying Cluster {$($POVFClusterConfiguration.ClusterName)} Operational Status" -Tag Operational {
     Context "Verifying Core Cluster Resources"{
-        $coreClusterResources = Invoke-Command -Session $pssession -ScriptBlock {
+        $coreClusterResources = Invoke-Command -Session $POVFPSSession -ScriptBlock {
             Get-ClusterResource | Where-Object {$PSItem.OwnerGroup -eq 'Cluster Group'} | Select-Object -Property Name,State,OwnerGroup,ResourceType
         }
         if($coreClusterResources){
             foreach($ccResource in $coreClusterResources){
                 IT "Verifying resource {$($ccResource.Name)} state is {Online}" {
-                    $ccResource.State.Value | Should Be 'Online'
+                    $ccResource.State.Value | Should Be 'Online' 
                 }
             }
         }
     }
     Context "Verifying Cluster Core Network Resources" {
-        $coreNetworkResources = Invoke-Command -Session $pssession -ScriptBlock { Get-ClusterNetwork }
+        $coreNetworkResources = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-ClusterNetwork }
         if($coreNetworkResources){
             foreach($cnResource in $coreNetworkResources){ 
                 IT "Verifying network resource {$($cnResource.Name)} state is {UP}"{
@@ -30,7 +29,7 @@ Describe "Verifying Cluster {$($ClusterConfiguration.ClusterName)} Operational S
         }
     }  
     Context "Verifying Cluster Network Interfaces" {
-        $networkInterfaces = Invoke-Command -Session $pssession -ScriptBlock { Get-ClusterNetworkInterface }
+        $networkInterfaces = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-ClusterNetworkInterface }
         if($networkInterfaces) {
             foreach ($nInterface in $networkInterfaces){
                 IT "Verifying network interface {$($nInterface.Name)} from Node {$($nInterface.Node)} State is {Up}" {
@@ -40,9 +39,9 @@ Describe "Verifying Cluster {$($ClusterConfiguration.ClusterName)} Operational S
         }
     }
 }
-Describe "Verifying Cluster Nodes Operational Status"{
+Describe "Verifying Cluster Nodes Operational Status" -Tag Operational{
     Context "Verifying Nodes are Online" {
-        $clusterNodes = Invoke-Command -Session $pssession -ScriptBlock { Get-ClusterNode }
+        $clusterNodes = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-ClusterNode }
         foreach($cNode in $clusterNodes){
             IT "Veryfing node {$($cNode.Name)} Status" { 
                 $cNode.State | Should Be 'Up'
@@ -50,9 +49,9 @@ Describe "Verifying Cluster Nodes Operational Status"{
         }
     }
 }
-Describe "Verifying Cluster {$($ClusterConfiguration.ClusterName)} Storage" {
+Describe "Verifying Cluster {$($POVFClusterConfiguration.ClusterName)} Storage" -Tag Operational{
     Context "Verifying Cluster Shared Volumes State" {
-        $clusterSharedVolumes = Invoke-Command -Session $pssession -ScriptBlock {Get-ClusterSharedVolume}
+        $clusterSharedVolumes = Invoke-Command -Session $POVFPSSession -ScriptBlock {Get-ClusterSharedVolume}
         if($clusterSharedVolumes) {
             foreach ($csVolume in $clusterSharedVolumes){
                 IT "Verifying Volume {$($csVolume.Name)} State is {Online}" {
@@ -66,10 +65,9 @@ Describe "Verifying Cluster {$($ClusterConfiguration.ClusterName)} Storage" {
         }
     }
     Context "Verifying Storage Job Status" {
-        $storageJobs = Invoke-Command -Session $pssession -ScriptBlock { Get-StorageJob }
+        $storageJobs = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-StorageJob }
         IT "There should be no storageJobs running" {
             $storageJobs | Should Be $null
         }
     }
-  
 }

@@ -2,7 +2,7 @@ param (
    $POVFConfiguration,
    $POVFCredential
 )
-Describe 'DHCP servers in Active Directory' { 
+Describe 'DHCP servers in Active Directory' -Tag 'Operational'{ 
   Context 'Verify DHCP servers' {
     $dhcpFromAD = Get-DhcpServerInDC | Select-Object -ExpandProperty DNSName
     Foreach ($dhcp in $dhcpFromAD) {

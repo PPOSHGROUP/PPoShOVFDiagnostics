@@ -2,13 +2,8 @@ param (
   $POVFPSSession,
   $POVFConfiguration
 )
-Describe "DHCP Service settings on Server {$($POVFConfiguration.ComputerName)}" -Tag Service {
+Describe "DHCP Service settings on Server {$($POVFConfiguration.ComputerName)}" -Tags @('Operational','Configuration') {
   Context 'Verify service configuration' {
-    it "Service should be running" {
-      (Invoke-Command -Session $POVFPSSession -ScriptBlock {
-          Get-Service -Name Dhcp
-      }).Status  | Should Be 'Running'
-    }
     it "DNS Credentials should match configuration {$($POVFConfiguration.DHCPServerDNSCredentials)}" {
       $DNSCredentials = Invoke-Command -Session $POVFPSSession -ScriptBlock {
         Get-DhcpServerDnsCredential
@@ -39,11 +34,6 @@ Describe "DHCP Service settings on Server {$($POVFConfiguration.ComputerName)}" 
     }
     it "Server AuditLog should match configuration Setting {$($POVFConfiguration.AuditLog)}" { 
       (Invoke-Command -Session $POVFPSSession -ScriptBlock { DhcpServerAuditLog }).AudotLog | Should Match $POVFConfiguration.AuditLog
-    }
-  }
-  Context 'Verify service statistics' {
-    it 'Should have at least 10% free IP space' {
-      (Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-DhcpServerv4Statistics }).PercentageAvailable | Should BeGreaterThan 10
     }
   }
 }

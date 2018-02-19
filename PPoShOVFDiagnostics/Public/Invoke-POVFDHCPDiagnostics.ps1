@@ -50,7 +50,7 @@ function Invoke-POVFDHCPDiagnostics {
     [Parameter(Mandatory=$false,HelpMessage='Configuration as PSCustomObject',
     ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
     [System.String]
-    $POVFConfiguration,
+    $POVFConfigurationFolder,
   
     [Parameter(Mandatory=$false, HelpMessage='Folder with Pester tests',
     ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
@@ -90,7 +90,7 @@ function Invoke-POVFDHCPDiagnostics {
     [System.Management.Automation.Credential()][System.Management.Automation.PSCredential]
     $Credential,
 
-    [Parameter(Mandatory=$false,HelpMessage='Tag for Pester ',
+    [Parameter(Mandatory=$false,HelpMessage='test type for Pester ',
     ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
     [ValidateSet('Simple','Comprehensive')]
     [string[]]
@@ -98,13 +98,10 @@ function Invoke-POVFDHCPDiagnostics {
 
     [Parameter(Mandatory=$false,HelpMessage='Tag for Pester ',
     ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-    [ValidateSet('Service','ScopeAndReservation','Configuration','Reservations')]
+    [ValidateSet('Operational','ScopeAndReservation','Configuration','Reservations')]
     [string[]]
     $Tag
     
-
-
-
     #$JEAEndpoint
   )
   process{
@@ -135,35 +132,78 @@ function Invoke-POVFDHCPDiagnostics {
     }
     #endregion
     #region param POVFConfiguration
-    if($PSBoundParameters.ContainsKey('POVFConfiguration')){
-      $paramPOVFConfiguration = $POVFConfiguration
+    if($PSBoundParameters.ContainsKey('POVFConfigurationFolder')){
+      $pOVFConfigurationFolderFinal = $POVFConfigurationFolder
     }
     else {
-      $configurationModulePath = "$PSScriptRoot\..\ConfigurationExample\DHCP\OBJPLDHCP1\DHCP.ServiceConfiguration.json"
-      $paramPOVFConfiguration = Get-ConfigurationData -ConfigurationPath $configurationModulePath -OutputType PSObject
+      $pOVFConfigurationFolderFinal = "$PSScriptRoot\..\ConfigurationExample\DHCP"
     }
     #endregion
-    #region param POVFPSSession - Remote Session Params
-    $POVFPSSession = New-POVFRemoteSession -ComputerName $POVFConfiguration.ComputerName -Credential $Credential
+    #region Global Service Configuration
+    $serviceConfigurationFile = Join-Path -Path $pOVFConfigurationFolderFinal -ChildPath 'DHCP.ServiceConfiguration.json'
+    if ($serviceConfigurationFile){
+      $serviceConfiguration = Get-ConfigurationData -ConfigurationPath $serviceConfigurationFile -OutputType PSObject
+    }
+    #endregion
+    #region Nodes configuration 
+      $nodes = Get-ChildItem -Path $pOVFConfigurationFolderFinal -Directory
+      if ($nodes) { 
+        $nodesConfiguration = @()
+        foreach ($node in $nodes) {
+          $tempConfig = @{}
+          $nodeConfigurationFile = Join-Path -Path $node.FullName -ChildPath 'DHCP.ServiceConfiguration.json'
+          if ($nodeConfigurationFile) { 
+            $tempConfig.nodeConfiguration = Get-ConfigurationData -ConfigurationPath $nodeConfigurationFile -OutputType PSObject
+          }
+
+          $reservationFolder = Join-Path -Path $node.FullName -ChildPath 'Reservations'
+          if($reservationFolder) {
+            $tempConfig.reservationsConfiguration = Get-ChildItem -Path reservationFolder | ForEach-Object { 
+              Get-ConfigurationData -ConfigurationPath $PSItem.FullName -OutputType PSObject 
+            }
+          }
+          
+          $scopeFolder = Join-Path -Path $node.FullName -ChildPath 'Scopes'
+          if ($scopeFolder){
+            $tempConfig.scopeConfiguration = $reservationsConfiguration = Get-ChildItem -Path $scopeFolder | ForEach-Object { 
+              Get-ConfigurationData -ConfigurationPath $PSItem.FullName -OutputType PSObject 
+            }
+          }
+          $nodesConfiguration +=$tempConfig
+        }
+      } 
     #endregion
     #endregion
     #region Invoke tests
-    $pOVFTestParams.POVFTestFileParameters =@{ 
-      POVFPSSession = $POVFPSSession
-      POVFConfiguration = $paramPOVFConfiguration
-      POVFCredential = $Credential
-    }
-    foreach ($test in $TestType) {
-      $testDirectory = Join-Path -Path $paramDiagnosticFolder -ChildPath $test 
-      if (-not (Test-Path $testDirectory)) {
-        Write-Log -Info -Message "No tests of type {$test} in path {$testDirectory}"
-        continue
+    switch ($TestType) {
+      'Simple' {
+        Write-Log -Info -Message 'Performing {Comprehensive Tests}'
+        $testDirectory = Join-Path -Path $paramDiagnosticFolder -ChildPath 'Simple'
+        #region POVF.DHCP.Simple.Tests.ps1
+        $pOVFTestParams.POVFTestFileParameters =@{ 
+          POVFConfiguration = $serviceConfiguration
+          POVFCredential = $Credential
+        }
+        $testFile = Get-ChildItem -Path $testDirectory -ChildPath 'POVF.DHCP.Simple.Tests.ps1'
+
+        Invoke-POVFTest @pOVFTestParams -POVFTestFile $testFile
+        #endregion
+        #region POVF.DHCP.Node.Simple.Tests.ps1
+        foreach ($nodeConfig in $nodesConfiguration) {
+          $nodePSSession = New-POVFRemoteSession -ComputerName $nodeConfig.ComputerName -Credential $Credential
+          $pOVFTestParams.POVFTestFileParameters =@{ 
+            POVFConfiguration = $nodeConfig
+            POVFPSSession = $nodePSSession
+          }
+        }
+        $testFile = Get-ChildItem -Path $testDirectory -ChildPath 'POVF.DHCP.Node.Simple.Tests.ps1'
+        #endregion
+
       }
-      foreach ($file in (Get-ChildItem -path $testDirectory -filter *.Tests.ps1)){
-        Invoke-POVFTest @pOVFTestParams -POVFTestFile $file.FullName
+      'Comprehensive' { 
+        Write-Log -Info -Message 'Performing {Comprehensive Tests}'
       }
     }
-    #endregion
   }
   end{
     Get-PSSession | Remove-PSSession -ErrorAction SilentlyContinue   
