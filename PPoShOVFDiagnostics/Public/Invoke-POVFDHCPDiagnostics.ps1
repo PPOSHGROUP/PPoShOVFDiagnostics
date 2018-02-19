@@ -138,6 +138,7 @@ function Invoke-POVFDHCPDiagnostics {
     else {
       $pOVFConfigurationFolderFinal = "$PSScriptRoot\..\ConfigurationExample\DHCP"
     }
+    Write-Log -Info -Message "Will read service configuration from {$pOVFConfigurationFolderFinal}"
     #endregion
     #region Global Service Configuration
     $serviceConfigurationFile = Join-Path -Path $pOVFConfigurationFolderFinal -ChildPath 'DHCP.ServiceConfiguration.json'
@@ -150,7 +151,11 @@ function Invoke-POVFDHCPDiagnostics {
       if ($nodes) { 
         $nodesConfiguration = @()
         foreach ($node in $nodes) {
-          $tempConfig = @{}
+          $tempConfig = @{
+            nodeConfiguration = ''
+            reservationsConfiguration = ''
+            scopeConfiguration = ''
+          }
           $nodeConfigurationFile = Join-Path -Path $node.FullName -ChildPath 'DHCP.ServiceConfiguration.json'
           if ($nodeConfigurationFile) { 
             $tempConfig.nodeConfiguration = Get-ConfigurationData -ConfigurationPath $nodeConfigurationFile -OutputType PSObject
@@ -158,14 +163,14 @@ function Invoke-POVFDHCPDiagnostics {
 
           $reservationFolder = Join-Path -Path $node.FullName -ChildPath 'Reservations'
           if($reservationFolder) {
-            $tempConfig.reservationsConfiguration = Get-ChildItem -Path reservationFolder | ForEach-Object { 
+            $tempConfig.reservationsConfiguration = Get-ChildItem -Path $reservationFolder | ForEach-Object { 
               Get-ConfigurationData -ConfigurationPath $PSItem.FullName -OutputType PSObject 
             }
           }
           
           $scopeFolder = Join-Path -Path $node.FullName -ChildPath 'Scopes'
           if ($scopeFolder){
-            $tempConfig.scopeConfiguration = $reservationsConfiguration = Get-ChildItem -Path $scopeFolder | ForEach-Object { 
+            $tempConfig.scopeConfiguration = Get-ChildItem -Path $scopeFolder | ForEach-Object { 
               Get-ConfigurationData -ConfigurationPath $PSItem.FullName -OutputType PSObject 
             }
           }
@@ -177,26 +182,35 @@ function Invoke-POVFDHCPDiagnostics {
     #region Invoke tests
     switch ($TestType) {
       'Simple' {
-        Write-Log -Info -Message 'Performing {Comprehensive Tests}'
+        Write-Log -Info -Message 'Performing {Simple Tests}'
         $testDirectory = Join-Path -Path $paramDiagnosticFolder -ChildPath 'Simple'
         #region POVF.DHCP.Simple.Tests.ps1
         $pOVFTestParams.POVFTestFileParameters =@{ 
           POVFConfiguration = $serviceConfiguration
           POVFCredential = $Credential
         }
-        $testFile = Get-ChildItem -Path $testDirectory -ChildPath 'POVF.DHCP.Simple.Tests.ps1'
-
-        Invoke-POVFTest @pOVFTestParams -POVFTestFile $testFile
+        $testFile = Get-ChildItem -Path (Join-Path -Path $testDirectory -ChildPath 'POVF.DHCP.Simple.Tests.ps1')
+        if ($testFile) { 
+          Invoke-POVFTest @pOVFTestParams -POVFTestFile $testFile.FullName
+        }
         #endregion
         #region POVF.DHCP.Node.Simple.Tests.ps1
         foreach ($nodeConfig in $nodesConfiguration) {
-          $nodePSSession = New-POVFRemoteSession -ComputerName $nodeConfig.ComputerName -Credential $Credential
+          Write-Log -Info -Message "Processing node: {$($nodeConfig.nodeConfiguration.ComputerName)}"
+          $nodePSSession = New-POVFRemoteSession -ComputerName $nodeConfig.nodeConfiguration.ComputerName -Credential $Credential
           $pOVFTestParams.POVFTestFileParameters =@{ 
-            POVFConfiguration = $nodeConfig
+            POVFConfiguration = $nodeConfig.nodeConfiguration
             POVFPSSession = $nodePSSession
           }
+          $testFile = Get-ChildItem -Path (Join-Path -Path $testDirectory -ChildPath 'POVF.DHCP.Node.Simple.Tests.ps1')
+          if ($testFile) { 
+            Write-Log -Info -Message "Processing: $testFile"
+            $tempOutputfile = "POVF.DHCP.{0}.Node.Simple.Tests" -f $nodeConfig.nodeConfiguration.ComputerName
+            $pOVFTestParams.OutputFile = $tempOutputfile
+            Invoke-POVFTest @pOVFTestParams -POVFTestFile $testFile.FullName
+          }
         }
-        $testFile = Get-ChildItem -Path $testDirectory -ChildPath 'POVF.DHCP.Node.Simple.Tests.ps1'
+        
         #endregion
 
       }
