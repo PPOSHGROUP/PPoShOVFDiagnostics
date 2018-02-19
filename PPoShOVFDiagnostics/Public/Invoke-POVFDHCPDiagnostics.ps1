@@ -98,7 +98,7 @@ function Invoke-POVFDHCPDiagnostics {
 
     [Parameter(Mandatory=$false,HelpMessage='Tag for Pester ',
     ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-    [ValidateSet('Operational','ScopeAndReservation','Configuration','Reservations')]
+    [ValidateSet('Operational','Scope','Reservation','Configuration')]
     [string[]]
     $Tag
     
@@ -141,7 +141,7 @@ function Invoke-POVFDHCPDiagnostics {
     Write-Log -Info -Message "Will read service configuration from {$pOVFConfigurationFolderFinal}"
     #endregion
     #region Global Service Configuration
-    $serviceConfigurationFile = Join-Path -Path $pOVFConfigurationFolderFinal -ChildPath 'DHCP.ServiceConfiguration.json'
+    $serviceConfigurationFile = Join-Path -Path $pOVFConfigurationFolderFinal -ChildPath 'DHCP.ServiceConfiguration.psd1'
     if ($serviceConfigurationFile){
       $serviceConfiguration = Get-ConfigurationData -ConfigurationPath $serviceConfigurationFile -OutputType PSObject
     }
@@ -156,7 +156,7 @@ function Invoke-POVFDHCPDiagnostics {
             reservationsConfiguration = ''
             scopeConfiguration = ''
           }
-          $nodeConfigurationFile = Join-Path -Path $node.FullName -ChildPath 'DHCP.ServiceConfiguration.json'
+          $nodeConfigurationFile = Join-Path -Path $node.FullName -ChildPath 'DHCP.ServiceConfiguration.psd1'
           if ($nodeConfigurationFile) { 
             $tempConfig.nodeConfiguration = Get-ConfigurationData -ConfigurationPath $nodeConfigurationFile -OutputType PSObject
           }
@@ -216,8 +216,27 @@ function Invoke-POVFDHCPDiagnostics {
       }
       'Comprehensive' { 
         Write-Log -Info -Message 'Performing {Comprehensive Tests}'
+        $testDirectory = Join-Path -Path $paramDiagnosticFolder -ChildPath 'Comprehensive'
+        #region POVF.DHCP.Node.Comprehensive.Tests.ps1
+        foreach ($nodeConfig in $nodesConfiguration) {
+          Write-Log -Info -Message "Processing node: {$($nodeConfig.nodeConfiguration.ComputerName)}"
+          $nodePSSession = New-POVFRemoteSession -ComputerName $nodeConfig.nodeConfiguration.ComputerName -Credential $Credential
+          $pOVFTestParams.POVFTestFileParameters =@{ 
+            POVFConfiguration = $nodeConfig.nodeConfiguration
+            POVFPSSession = $nodePSSession
+          }
+          $testFile = Get-ChildItem -Path (Join-Path -Path $testDirectory -ChildPath 'POVF.DHCP.Node.Comprehensive.Tests.ps1')
+          if ($testFile) { 
+            Write-Log -Info -Message "Processing: $testFile"
+            $tempOutputfile = "POVF.DHCP.{0}.Node.Comprehensive.Tests" -f $nodeConfig.nodeConfiguration.ComputerName
+            $pOVFTestParams.OutputFile = $tempOutputfile
+            Invoke-POVFTest @pOVFTestParams -POVFTestFile $testFile.FullName
+          }
+        }
+        #endregion
       }
     }
+    #endregion
   }
   end{
     Get-PSSession | Remove-PSSession -ErrorAction SilentlyContinue   
