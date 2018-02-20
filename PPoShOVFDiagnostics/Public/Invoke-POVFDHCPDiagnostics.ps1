@@ -197,7 +197,7 @@ function Invoke-POVFDHCPDiagnostics {
         #region POVF.DHCP.Node.Simple.Tests.ps1
         foreach ($nodeConfig in $nodesConfiguration) {
           Write-Log -Info -Message "Processing node: {$($nodeConfig.nodeConfiguration.ComputerName)}"
-          $nodePSSession = New-POVFRemoteSession -ComputerName $nodeConfig.nodeConfiguration.ComputerName -Credential $Credential
+          $nodePSSession = New-PSSessionCustom -ComputerName $nodeConfig.nodeConfiguration.ComputerName -Credential $Credential
           $pOVFTestParams.POVFTestFileParameters =@{ 
             POVFConfiguration = $nodeConfig.nodeConfiguration
             POVFPSSession = $nodePSSession
@@ -220,7 +220,7 @@ function Invoke-POVFDHCPDiagnostics {
         #region POVF.DHCP.Node.Comprehensive.Tests.ps1
         foreach ($nodeConfig in $nodesConfiguration) {
           Write-Log -Info -Message "Processing node: {$($nodeConfig.nodeConfiguration.ComputerName)}"
-          $nodePSSession = New-POVFRemoteSession -ComputerName $nodeConfig.nodeConfiguration.ComputerName -Credential $Credential
+          $nodePSSession = New-PSSessionCustom -ComputerName $nodeConfig.nodeConfiguration.ComputerName -Credential $Credential
           $pOVFTestParams.POVFTestFileParameters =@{ 
             POVFConfiguration = $nodeConfig.nodeConfiguration
             POVFPSSession = $nodePSSession

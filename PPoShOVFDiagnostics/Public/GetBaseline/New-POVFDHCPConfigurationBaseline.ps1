@@ -32,7 +32,7 @@ function New-POVFDHCPConfigurationBaseline {
         $serviceConfiguration | Out-File (Join-Path -Path $POVFConfigurationFolder -ChildPath $serviceConfigurationFile )
         #endregion
         foreach ($node in $dhcpFromAD) {
-            $nodePSSession = New-POVFRemoteSession -ComputerName $node -Credential $Credential
+            $nodePSSession = New-PSSessionCustom -ComputerName $node -Credential $Credential
             $nodeConfig = Invoke-Command -Session $nodePSSession -ScriptBlock {
                 $dhcpServerDatabase = Get-DhcpServerDatabase
                 $dhcpserverDNSCredential =  Get-DhcpServerDnsCredential
