@@ -156,9 +156,11 @@ function Invoke-POVFDHCPDiagnostics {
             reservationsConfiguration = ''
             scopeConfiguration = ''
           }
-          $nodeConfigurationFile = Join-Path -Path $node.FullName -ChildPath 'DHCP.ServiceConfiguration.psd1'
-          if ($nodeConfigurationFile) { 
-            $tempConfig.nodeConfiguration = Get-ConfigurationData -ConfigurationPath $nodeConfigurationFile -OutputType PSObject
+          $nodeConfigurationFile = Get-ChildItem -Path "$($node.FullName)\*" -include '*.psd1','*.json'
+          if ($nodeConfigurationFile) {
+            foreach ($file in $nodeConfigurationFile) { 
+              $tempConfig.nodeConfiguration = Get-ConfigurationData -ConfigurationPath $file.FullName -OutputType PSObject
+            }
           }
 
           $reservationFolder = Join-Path -Path $node.FullName -ChildPath 'Reservations'

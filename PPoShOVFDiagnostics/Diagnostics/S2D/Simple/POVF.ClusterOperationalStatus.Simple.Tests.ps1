@@ -1,9 +1,9 @@
 param (
-    $POVFClusterName,
+    $POVFConfiguration,
     $POVFPSSession
 )
 
-Describe "Verifying Cluster {$($POVFClusterName)} Operational Status" -Tag Operational{
+Describe "Verifying Cluster {$($POVFConfiguration.ClusterName)} Operational Status" -Tag Operational{
     Context "Verifying Core Cluster Resources"{
         $coreClusterResources = Invoke-Command -Session $POVFPSSession -ScriptBlock {
             Get-ClusterResource | Where-Object {$PSItem.OwnerGroup -eq 'Cluster Group'} | Select-Object -Property Name,State,OwnerGroup,ResourceType
@@ -37,7 +37,7 @@ Describe "Verifying Cluster {$($POVFClusterName)} Operational Status" -Tag Opera
         }
     }
 }
-Describe "Verifying Cluster {$($POVFClusterName)} Nodes Operational Status" -Tag Operational{
+Describe "Verifying Cluster {$($POVFConfiguration.ClusterName)} Nodes Operational Status" -Tag Operational {
     Context "Verifying Nodes are Online" {
         $clusterNodes = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-ClusterNode }
         foreach($cNode in $clusterNodes){
@@ -47,7 +47,7 @@ Describe "Verifying Cluster {$($POVFClusterName)} Nodes Operational Status" -Tag
         }
     }
 }
-Describe "Verifying Cluster {$($POVFClusterName)} Storage" -Tag Operational {
+Describe "Verifying Cluster {$($POVFConfiguration.ClusterName)} Storage" -Tag Operational {
     Context "Verifying Cluster Shared Volumes State" {
         $clusterSharedVolumes = Invoke-Command -Session $POVFPSSession -ScriptBlock {Get-ClusterSharedVolume}
         if($clusterSharedVolumes) {
