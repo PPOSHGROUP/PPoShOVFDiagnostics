@@ -96,29 +96,36 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
     if($POVFConfiguration.Team){ 
         Context "Verify Network Team Configuration" {
             foreach ($team in $POVFConfiguration.Team) {
+                $hostTeam = Invoke-Command $session -ScriptBlock {
+                    Get-NetLbfoTeam -Name $USING:team.TeamName
+                }
                 it "Verify Team {$($team.TeamName)} exists" {
-
+                    $hostTeam | Should -Not -BeNullOrEmpty
                 }
                 it "Verify Team {$($team.TeamName)} TeamingMode" {
-                    
+                    $hostTeam.TeamingMode | Should Be $team.TeamingMode 
                 }
                 it "Verify Team {$($team.TeamName)} LoadBalancingAlgorithm" {
-                    
+                    $hostTeam.LoadBalancingAlgorithm | Should Be $team.LoadBalancingAlgorithm
                 }
                 it "Verify Team {$($team.TeamName)} TeamMembers" {
-                    
+                    $fromPOVFConfig = $hostTeam.TeamMembers -split ','
+                    Compare-Object -ReferenceObject $fromPOVFConfig -DifferenceObject $hostTeam.TeamMembers | Should -BeNullOrEmpty 
                 }
             }
         }
     }
-    if($POVFConfiguration.VirtualSwitch){
+    if($POVFConfiguration.VmSwitch){
         Context "Verify Virtual Switch Configuration" {
-            foreach ($vSwitch in $POVFConfiguration.VirtualSwitch) {
-                it "Verify vSwitch Name {$()} exists" {
-
+            foreach ($vSwitch in $POVFConfiguration.VmSwitch) {
+                $hostVMSwitch = Invoke-Command $session -ScriptBlock {
+                    Get-VMSwitch -Name $USING:VSwitch.Name
+                }
+                it "Verify vSwitch Name {$($vSwitch.Name)} exists" {
+                    $hostVMSwitch | Should -Not -BeNullOrEmpty
                 }
                 it "Verify vSwitch Name {} interface bound" {
-                    
+
                 }
 
             }
