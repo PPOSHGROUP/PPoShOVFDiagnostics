@@ -3,7 +3,7 @@ param(
     $POVFPSSession
 )
 
-Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($POVFConfiguration.ClusterName)} Configuration Status" -Tag 'Configuration' {
+Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($POVFConfiguration.ClusterName)} Basic Network Configuration Status" -Tags @('Configuration','Basic') {
     #<#
     Context "Verify Network Adapter Properties"{
         foreach ($NIC in $POVFConfiguration.NIC) {
@@ -79,6 +79,8 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
             }
         }
     }
+}
+Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($POVFConfiguration.ClusterName)} Registry Configuration Status" -Tags @('Configuration','Registry') {
     if($POVFConfiguration.RegistryEntry){ 
         Context "Verify Registry Entries" {
             foreach ($rEntry in $POVFConfiguration.RegistryEntry) {
@@ -94,7 +96,103 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
 
         }
     }
-    #QoS
+}
+Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($POVFConfiguration.ClusterName)} NetQos Configuration Status" -Tags @('Configuration','NetQoS') {
+     Context "Verify NetQos Policies Configuration" { 
+        $hostQosPolicies = Invoke-Command -Session $POVFPSSession -ScriptBlock { 
+            Get-NetQosPolicy
+        }
+        if ($POVFConfiguration.NetQos.NetQosPolicies){
+            foreach ($cQoSPolicy in ($POVFConfiguration.NetQos.NetQosPolicies| Where-Object {$PSItem.Name -notmatch 'Default'})) {
+                it "Configuration entry for QoS Policy, name {$($cQoSPolicy.Name)} should be on Host" { 
+                    $cQoSPolicy.Name | Should -BeIn $hostQosPolicies.Name
+                }
+                it "Configuration entry for QoS Policiy, name - {$($cQoSPolicy.Name)}, parameter Priority {$($cQoSPolicy.Priority)} should be on Host" {
+                    $cQoSPolicy.Priority | Should -BeIn ($hostQosPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).Priority
+                }
+                it "Configuration entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter BandwidthPercentage {$($cQoSPolicy.BandwidthPercentage)} should be on Host" {
+                    $cQoSPolicy.BandwidthPercentage | Should -BeIn ($hostQosPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).BandwidthPercentage
+                }
+                it "Configuration entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter Algorithm {$($cQoSPolicy.Algorithm)} should be on Host" {
+                    $cQoSPolicy.Algorithm | Should -BeIn ($hostQosPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).Algorithm
+                }
+            }
+            foreach ($hQosTrafficClass in ($hostQosPolicies| Where-Object {$PSItem.Name -notmatch 'Default'})){
+                it "Entry for QoSTrafficClass, name {$($hQosTrafficClass.Name)} should be in Configuration" { 
+                    $hQosTrafficClass.Name | Should -BeIn $POVFConfiguration.NetQos.QosTrafficClass.Name
+                }
+                it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)}, parameter Priority {$($hQosTrafficClass.Priority)} should be in Configuration" {
+                    $hQosTrafficClass.Priority | Should -BeIn ($POVFConfiguration.NetQos.QosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Priority
+                }
+                it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)}, parameter BandwidthPercentage {$($hQosTrafficClass.BandwidthPercentage)} should be in Configuration" {
+                    $hQosTrafficClass.BandwidthPercentage | Should -BeIn ($POVFConfiguration.NetQos.QosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).BandwidthPercentage
+                }
+                it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)}, parameter Algorithm {$($hQosTrafficClass.Algorithm)} should be in Configuration" {
+                    $hQosTrafficClass.Algorithm | Should -BeIn ($POVFConfiguration.NetQos.QosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Algorithm
+                }
+            }
+        }
+    }
+    Context "Verify NetQoS configuration" {
+        it "Verify NetQosDCBxSetting configuration - {$($POVFConfiguration.NetQos.NetQosDcbxSetting.Willing)}" {
+            $hostNetQosDcbxSetting = Invoke-Command -Session $POVFPSSession -ScriptBlock { 
+                Get-NetQosDcbxSetting | Select-Object -ExpandProperty Willing
+            }
+            $hostNetQosDcbxSetting | Should Be $POVFConfiguration.NetQos.NetQosDcbxSetting.Willing
+        }
+    }
+    Context 'Verify NetQos Flow Control configuration' { 
+        $hostQosFlowControl = Invoke-Command -Session $POVFPSSession -ScriptBlock { 
+            Get-NetQosFlowControl
+        }
+        foreach ($hQosFlowContrlEntry in ($hostQosFlowControl | Where-Object {$PSItem.Enabled -eq $true}) ) {
+            it "Verify QosFlowControl priorty {$($hQosFlowContrlEntry.Priority)} - {Enabled}" {
+                $hQosFlowContrlEntry.Priority | Should -BeIn  $POVFConfiguration.NetQos.NetQosFlowControl.Enabled
+            }
+        }
+        foreach ($hQosFlowContrlEntry in ($hostQosFlowControl | Where-Object {$PSItem.Enabled -eq $false}) ) {
+            it "Verify QosFlowControl priorty {$($hQosFlowContrlEntry.Priority)} - {Disabled}" {
+                $hQosFlowContrlEntry.Priority | Should -BeIn  $POVFConfiguration.NetQos.NetQosFlowControl.Disabled
+            }
+        }
+    }
+    Context "Verify NetQos Traffic Class Configuration" { 
+        $hostQosTrafficClass = Invoke-Command -Session $POVFPSSession -ScriptBlock { 
+            Get-NetQOsTrafficClass
+        }
+        if ($POVFConfiguration.NetQos.NetQosTrafficClass){
+            foreach ($cQoSTrafficClass in $POVFConfiguration.NetQos.NetQosTrafficClass) {
+                it "Configuration entry for QoSTrafficClass, name {$($cQoSTrafficClass.Name)} should be on Host" { 
+                    $cQoSTrafficClass.Name | Should -BeIn $hostQosTrafficClass.Name
+                }
+                it "Configuration entry for QoSTrafficClass, name - {$($cQoSTrafficClass.Name)}, parameter Priority {$($cQoSTrafficClass.Priority)} should be on Host" {
+                    $cQoSTrafficClass.Priority | Should -BeIn ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).Priority
+                }
+                it "Configuration entry for QoSTrafficClass, name - {$($cQoSTrafficClass.Name)}, parameter BandwidthPercentage {$($cQoSTrafficClass.BandwidthPercentage)} should be on Host" {
+                    $cQoSTrafficClass.BandwidthPercentage | Should -BeIn ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).BandwidthPercentage
+                }
+                it "Configuration entry for QoSTrafficClass, name - {$($cQoSTrafficClass.Name)}, parameter Algorithm {$($cQoSTrafficClass.Algorithm)} should be on Host" {
+                    $cQoSTrafficClass.Algorithm | Should -BeIn ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).Algorithm
+                }
+            }
+            foreach ($hQosTrafficClass in ($hostQosTrafficClass| Where-Object {$PSItem.Name -notmatch 'Default'})){
+                it "Entry for QoSTrafficClass, name {$($hQosTrafficClass.Name)} should be in Configuration" { 
+                    $hQosTrafficClass.Name | Should -BeIn $POVFConfiguration.NetQos.QosTrafficClass.Name
+                }
+                it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)}, parameter Priority {$($hQosTrafficClass.Priority)} should be in Configuration" {
+                    $hQosTrafficClass.Priority | Should -BeIn ($POVFConfiguration.NetQos.QosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Priority
+                }
+                it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)}, parameter BandwidthPercentage {$($hQosTrafficClass.BandwidthPercentage)} should be in Configuration" {
+                    $hQosTrafficClass.BandwidthPercentage | Should -BeIn ($POVFConfiguration.NetQos.QosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).BandwidthPercentage
+                }
+                it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)}, parameter Algorithm {$($hQosTrafficClass.Algorithm)} should be in Configuration" {
+                    $hQosTrafficClass.Algorithm | Should -BeIn ($POVFConfiguration.NetQos.QosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Algorithm
+                }
+            }
+        }
+    }
+}
+Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($POVFConfiguration.ClusterName)} Teaming Configuration Status" -Tags @('Configuration','Teaming') {
     if($POVFConfiguration.Team){ 
         Context "Verify Network Team Configuration" {
             foreach ($team in $POVFConfiguration.Team) {
@@ -116,7 +214,8 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
             }
         }
     }
-    
+}
+Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($POVFConfiguration.ClusterName)} VMSwitch Configuration Status" -Tags @('Configuration','VMSwitch') {   
     if($POVFConfiguration.VmSwitch){
         Context "Verify Virtual Switch Configuration" {
             foreach ($vSwitch in $POVFConfiguration.VmSwitch) {
@@ -175,14 +274,14 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
                         else {
                             $DNSServers = $null
                         }
-                        #do przerobienia
                         $DNSServers | Should -BeIn $vSwitchVMNetworkAdapter.IPConfiguration.DNSClientServerAddress
                     }
                 }
             }
         }
     }
-    #>
+}
+Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($POVFConfiguration.ClusterName)} Roles Configuration Status" -Tags @('Configuration','Roles') {
     if($POVFConfiguration.Roles){
         Context 'Verify Roles configuration' {
             $hostRoles = Invoke-Command $POVFPSSession -ScriptBlock {
@@ -190,7 +289,7 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
             }
             foreach($presentRole in $POVFConfiguration.Roles.Present.Name) {
                 $presentRole
-                it "Verify role {$presentRole)} is installed" {
+                it "Verify role {$presentRole} is installed" {
                     $testRole = $hostRoles | Where-Object {$PSItem.Name -eq $presentRole}
                     $testRole.Installed |Should Be $true
                 }
@@ -205,6 +304,31 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
             }   
         }
     }
-
-    #HyperV config
+}
+Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($POVFConfiguration.ClusterName)} Hyper-V Configuration Status" -Tags @('Configuration','Hyper-V') {
+    if($POVFConfiguration.HyperVConfiguration){
+        Context "Verify Hyper-V host configuration" {
+            $hostProperties = Invoke-Command $POVFPSSession -ScriptBlock {
+                Get-VMHost | Select-Object *
+            }
+            it "Verify Virtual Hard Disks path configuration" {
+                $hostProperties.VirtualHardDiskPath | Should Be $POVFConfiguration.HyperVConfiguration.VirtualHardDiskPath
+            }
+            it "Verify Virtual Machines path configuration" {
+                $hostProperties.VirtualMachinePath | Should Be $POVFConfiguration.HyperVConfiguration.VirtualMachinePath
+            }
+            it "Verify Live Migration status - {$($POVFConfiguration.HyperVConfiguration.LiveMigrations.Enabled)}" {
+                $hostProperties.VirtualMachineMigrationEnabled | Should Be $POVFConfiguration.HyperVConfiguration.LiveMigrations.Enabled
+            }
+            it "Verify number of simultaneous Live Migration status - {$($POVFConfiguration.HyperVConfiguration.LiveMigrations.Simultaneous)}" {
+                $hostProperties.MaximumVirtualMachineMigrations | Should Be $POVFConfiguration.HyperVConfiguration.LiveMigrations.Simultaneous
+            }  
+            it "Verify number of simultaneous Storage Migration status - {$($POVFConfiguration.HyperVConfiguration.StorageMigrations.Simultaneous)}" {
+                $hostProperties.MaximumStorageMigrations | Should Be $POVFConfiguration.HyperVConfiguration.StorageMigrations.Simultaneous
+            }
+            it "Verify Numa Spanning status - {$($POVFConfiguration.HyperVConfiguration.NumaSpanning.Enabled)}" {
+                $hostProperties.NumaSpanningEnabled | Should Be $POVFConfiguration.HyperVConfiguration.NumaSpanning.Enabled
+            }
+        }
+    }
 }
