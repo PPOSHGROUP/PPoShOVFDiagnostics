@@ -54,7 +54,7 @@ function Invoke-POVFS2DDiagnostics {
 
     [Parameter(Mandatory=$false,HelpMessage='Tag for Pester ',
     ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-    [ValidateSet('Operational','Scope','Reservation','Configuration')]
+    [ValidateSet('Operational','Configuration','Basic','Registry','NetQoS','Teaming','VMSwitch','Roles','Hyper-V')]
     [string[]]
     $Tag
     
