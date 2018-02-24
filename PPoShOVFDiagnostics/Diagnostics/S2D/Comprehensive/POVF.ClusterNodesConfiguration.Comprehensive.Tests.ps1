@@ -104,31 +104,39 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
         }
         if ($POVFConfiguration.NetQos.NetQosPolicies){
             foreach ($cQoSPolicy in ($POVFConfiguration.NetQos.NetQosPolicies| Where-Object {$PSItem.Name -notmatch 'Default'})) {
-                it "Configuration entry for QoS Policy, name {$($cQoSPolicy.Name)} should be on Host" { 
+                it "Configuration entry for QoS Policy, name - {$($cQoSPolicy.Name)} should be on Host" { 
                     $cQoSPolicy.Name | Should -BeIn $hostQosPolicies.Name
                 }
-                it "Configuration entry for QoS Policiy, name - {$($cQoSPolicy.Name)}, parameter Priority {$($cQoSPolicy.Priority)} should be on Host" {
-                    $cQoSPolicy.Priority | Should -BeIn ($hostQosPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).Priority
+                it "Configuration entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter Priority {$($cQoSPolicy.PriorityValue8021Action)} should be on Host" {
+                    $cQoSPolicy.PriorityValue8021Action | Should Be ($hostQosPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).PriorityValue8021Action
                 }
-                it "Configuration entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter BandwidthPercentage {$($cQoSPolicy.BandwidthPercentage)} should be on Host" {
-                    $cQoSPolicy.BandwidthPercentage | Should -BeIn ($hostQosPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).BandwidthPercentage
+                if($cQoSPolicy.NetDirectPortMatchCondition -ne $null) { 
+                    it "Configuration entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter NetDirectPortMatchCondition {$($cQoSPolicy.NetDirectPortMatchCondition)} should be on Host" {
+                        $cQoSPolicy.NetDirectPortMatchCondition | Should Be ($hostQosPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).NetDirectPortMatchCondition
+                    }
                 }
-                it "Configuration entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter Algorithm {$($cQoSPolicy.Algorithm)} should be on Host" {
-                    $cQoSPolicy.Algorithm | Should -BeIn ($hostQosPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).Algorithm
+                if($cQoSPolicy.IPProtocolMatchCondition -ne $null){ 
+                    it "Configuration entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter IPProtocolMatchCondition {$($cQoSPolicy.IPProtocolMatchCondition)} should be on Host" {
+                        $cQoSPolicy.IPProtocolMatchCondition | Should Be ($hostQosPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).IPProtocolMatchCondition
+                    }
                 }
             }
-            foreach ($hQosTrafficClass in ($hostQosPolicies| Where-Object {$PSItem.Name -notmatch 'Default'})){
-                it "Entry for QoSTrafficClass, name {$($hQosTrafficClass.Name)} should be in Configuration" { 
-                    $hQosTrafficClass.Name | Should -BeIn $POVFConfiguration.NetQos.QosTrafficClass.Name
+            foreach ($hQosPolicy in ($hostQosPolicies| Where-Object {$PSItem.Name -notmatch 'Default'})){
+                it "Entry for QoS Policy, name - {$($hQosPolicy.Name)} should be in Configuration" { 
+                    $hQosPolicy.Name | Should -BeIn $POVFConfiguration.NetQos.NetQosPolicies.Name
                 }
-                it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)}, parameter Priority {$($hQosTrafficClass.Priority)} should be in Configuration" {
-                    $hQosTrafficClass.Priority | Should -BeIn ($POVFConfiguration.NetQos.QosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Priority
+                it "Entry for QoS Policy, name - {$($hQosPolicy.Name)}, parameter PriorityValue8021Action {$($hQosPolicy.PriorityValue8021Action)} should be in Configuration" {
+                    $hQosPolicy.PriorityValue8021Action | Should Be ($POVFConfiguration.NetQos.NetQosPolicies | Where-Object {$PSItem.Name -eq $hQosPolicy.Name}).PriorityValue8021Action
                 }
-                it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)}, parameter BandwidthPercentage {$($hQosTrafficClass.BandwidthPercentage)} should be in Configuration" {
-                    $hQosTrafficClass.BandwidthPercentage | Should -BeIn ($POVFConfiguration.NetQos.QosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).BandwidthPercentage
+                if($hQosPolicy.NetDirectPortMatchCondition -ne '0') { 
+                    it "Entry for QoS Policy, name - {$($hQosPolicy.Name)}, parameter NetDirectPortMatchCondition {$($hQosPolicy.NetDirectPortMatchCondition)} should be in Configuration" {
+                        $hQosPolicy.NetDirectPortMatchCondition | Should Be ($POVFConfiguration.NetQos.NetQosPolicies | Where-Object {$PSItem.Name -eq $hQosPolicy.Name}).NetDirectPortMatchCondition
+                    }
                 }
-                it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)}, parameter Algorithm {$($hQosTrafficClass.Algorithm)} should be in Configuration" {
-                    $hQosTrafficClass.Algorithm | Should -BeIn ($POVFConfiguration.NetQos.QosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Algorithm
+                if($hQosPolicy.IPProtocolMatchCondition -ne 'None'){ 
+                    it "Entry for QoS Policy, name - {$($hQosPolicy.Name)}, parameter IPProtocolMatchCondition {$($hQosPolicy.IPProtocolMatchCondition)} should be in Configuration" {
+                        $hQosPolicy.IPProtocolMatchCondition | Should Be ($POVFConfiguration.NetQos.NetQosPolicies | Where-Object {$PSItem.Name -eq $hQosPolicy.Name}).IPProtocolMatchCondition
+                    }
                 }
             }
         }
@@ -157,37 +165,50 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
         }
     }
     Context "Verify NetQos Traffic Class Configuration" { 
-        $hostQosTrafficClass = Invoke-Command -Session $POVFPSSession -ScriptBlock { 
-            Get-NetQOsTrafficClass
+        $hostQosTrafficClass = Invoke-Command -Session $POVFPSSession -ScriptBlock {
+            #During Deserialization value Algorithm goes from string to Byte Value. Need to force String in return object 
+            Get-NetQOsTrafficClass | Select-Object Name, Priority, BandwidthPercentage, @{name='Algorithm';expression={($_.Algorithm).ToString()}}
         }
         if ($POVFConfiguration.NetQos.NetQosTrafficClass){
             foreach ($cQoSTrafficClass in $POVFConfiguration.NetQos.NetQosTrafficClass) {
-                it "Configuration entry for QoSTrafficClass, name {$($cQoSTrafficClass.Name)} should be on Host" { 
+                #Verify if all entries from configuration are deployed to host
+                it "Configuration entry for QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} should be on Host" { 
                     $cQoSTrafficClass.Name | Should -BeIn $hostQosTrafficClass.Name
                 }
                 it "Configuration entry for QoSTrafficClass, name - {$($cQoSTrafficClass.Name)}, parameter Priority {$($cQoSTrafficClass.Priority)} should be on Host" {
-                    $cQoSTrafficClass.Priority | Should -BeIn ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).Priority
+                    $cQoSTrafficClass.Priority | Should Be ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).Priority
                 }
                 it "Configuration entry for QoSTrafficClass, name - {$($cQoSTrafficClass.Name)}, parameter BandwidthPercentage {$($cQoSTrafficClass.BandwidthPercentage)} should be on Host" {
-                    $cQoSTrafficClass.BandwidthPercentage | Should -BeIn ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).BandwidthPercentage
+                    $cQoSTrafficClass.BandwidthPercentage | Should Be ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).BandwidthPercentage
                 }
                 it "Configuration entry for QoSTrafficClass, name - {$($cQoSTrafficClass.Name)}, parameter Algorithm {$($cQoSTrafficClass.Algorithm)} should be on Host" {
-                    $cQoSTrafficClass.Algorithm | Should -BeIn ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).Algorithm
+                    $cQoSTrafficClass.Algorithm | Should Be ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).Algorithm
                 }
             }
             foreach ($hQosTrafficClass in ($hostQosTrafficClass| Where-Object {$PSItem.Name -notmatch 'Default'})){
-                it "Entry for QoSTrafficClass, name {$($hQosTrafficClass.Name)} should be in Configuration" { 
-                    $hQosTrafficClass.Name | Should -BeIn $POVFConfiguration.NetQos.QosTrafficClass.Name
+                #verify if all host options are in configuration files. 
+                it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)} should be in Configuration" { 
+                    $hQosTrafficClass.Name | Should -BeIn $POVFConfiguration.NetQos.NetQosTrafficClass.Name
                 }
                 it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)}, parameter Priority {$($hQosTrafficClass.Priority)} should be in Configuration" {
-                    $hQosTrafficClass.Priority | Should -BeIn ($POVFConfiguration.NetQos.QosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Priority
+                    $hQosTrafficClass.Priority | Should Be ($POVFConfiguration.NetQos.NetQosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Priority
                 }
                 it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)}, parameter BandwidthPercentage {$($hQosTrafficClass.BandwidthPercentage)} should be in Configuration" {
-                    $hQosTrafficClass.BandwidthPercentage | Should -BeIn ($POVFConfiguration.NetQos.QosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).BandwidthPercentage
+                    $hQosTrafficClass.BandwidthPercentage | Should Be ($POVFConfiguration.NetQos.NetQosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).BandwidthPercentage
                 }
                 it "Entry for QoSTrafficClass, name - {$($hQosTrafficClass.Name)}, parameter Algorithm {$($hQosTrafficClass.Algorithm)} should be in Configuration" {
-                    $hQosTrafficClass.Algorithm | Should -BeIn ($POVFConfiguration.NetQos.QosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Algorithm
+                    $hQosTrafficClass.Algorithm | Should Be ($POVFConfiguration.NetQos.NetQosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Algorithm
                 }
+            }
+        }
+    }
+    Context "Verify priority match in QosFlowControl, QosPolicies and QosTraffic Class" {
+        foreach ($hQosFlowContrlEntry in ($hostQosFlowControl | Where-Object {$PSItem.Enabled -eq $true}) ) {
+            it "Verify QoSFlowControl entry {$($hQosFlowContrlEntry.Name)} priority {$($hQosFlowContrlEntry.Priority)} match QoS Policies "{
+                $hQosFlowContrlEntry.Priority | Should -BeIn ($hostQosPolicies| Where-Object {$PSItem.Name -notmatch 'Default'}).PriorityValue
+            }
+            it "Verify QoSFlowControl entry {$($hQosFlowContrlEntry.Name)} priority {$($hQosFlowContrlEntry.Priority)} match QoS Traffic Class "{
+                $hQosFlowContrlEntry.Priority | Should -BeIn ($hostQosTrafficClass| Where-Object {$PSItem.Name -notmatch 'Default'}).Priority
             }
         }
     }
