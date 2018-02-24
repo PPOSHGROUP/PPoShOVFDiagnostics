@@ -31,6 +31,9 @@ Describe "Verify Active Directory services in forest {$($POVFConfiguration.Fores
     }
   }
   Context "Verify Active Directory services for domain {$($ADCUrrentForest.Name)} are recheable" {
+    it 'If is a VM should have VMICTmeProvider configured' { 
+    #New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\VMICTimeProvider -Name Enabled -Value 0 –Force
+    }
     it 'NTP service is responding on DC' {
 
     }
