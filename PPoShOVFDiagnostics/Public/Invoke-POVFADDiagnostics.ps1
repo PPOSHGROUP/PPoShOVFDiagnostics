@@ -1,104 +1,151 @@
 function Invoke-POVFADDiagnostics {
-    <#
-      .SYNOPSIS
-      Invoke OVF ActiveDirectory Diagnostics tests
   
-      .DESCRIPTION
-      Will run Pester tests from Diagnostics folder. If configuration variable is needed, save it to POVFConfiguration parameter.
+  [CmdletBinding()]
+  param
+  (
+    [Parameter(Mandatory=$false,HelpMessage='Configuration as PSCustomObject',
+    ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
+    [System.String]
+    $POVFConfigurationFolder,
   
-      .PARAMETER POVFConfiguration
-      PSCustom Object with configuration details needed for pester tests. If not provided will use default from module's Configuration folder.
+    [Parameter(Mandatory=$false, HelpMessage='Folder with Pester tests',
+    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [ValidateScript({Test-Path -Path $_ -PathType Container})]
+    [System.String]
+    $DiagnosticsFolder,
   
-      .PARAMETER DiagnosticsFolder
-      Location where Simple and Comprehensive tests are located. If not provided will use default from module's Diagnostic folder.
+    [Parameter(Mandatory=$false,
+    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [switch]
+    $WriteToEventLog,
   
-      .PARAMETER WriteToEventLog
-      If enabled will write resultes to EventLog.
+    [Parameter(Mandatory=$false,
+    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [string]
+    $EventSource,
   
-      .PARAMETER EventSource
-      EventSource to be used when event log entries are generated.
+    [Parameter(Mandatory=$false,
+    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [int32]
+    $EventIDBase,
   
-      .PARAMETER EventIDBase
-      Base ID to pass to Write-pOVFPesterEventLog
-      Success tests will be written to EventLog Application with MySource as source and EventIDBase +1.
-      Errors tests will be written to EventLog Application with MySource as source and EventIDBase +2.
-  
-      .PARAMETER OutputFolder
-      Location where NUnit xml with Pester results will be stored
-  
-      .EXAMPLE
-      $configuration  = Get-ConfigurationData -ConfigurationPath c:\someconfig.json -OutputType PSObject
-      Invoke-POVFADDiagnostics -POVFConfiguration $configuration -DiagnosticsFolder c:\DiagnosticTests -WriteToEventLog -EventSource MyTests -EventIDBase 1000 -OutputFolder c:\DiagnosticResults
-      
-    #>
-   
-    [CmdletBinding()]
-    param
-    (
-      [Parameter(Mandatory=$false,HelpMessage='Configuration as PSCustomObject',
-      ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
-      [PSCustomObject]
-      $POVFConfiguration,
-  
-      [Parameter(Mandatory=$false, HelpMessage='Folder with Pester tests',
-      ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-      [ValidateScript({Test-Path -Path $_ -PathType Container})]
-      [System.String]
-      $DiagnosticsFolder,
-  
-      [Parameter(Mandatory=$false,
-      ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-      [switch]
-      $WriteToEventLog,
-  
-      [Parameter(Mandatory=$false,
-      ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-      [string]
-      $EventSource,
-  
-      [Parameter(Mandatory=$false,
-      ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-      [int32]
-      $EventIDBase,
-  
-      [Parameter(Mandatory=$false,HelpMessage='Destination folder for reports',
-      ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-      [ValidateScript({Test-Path -Path $_ -PathType Container -IsValid})]
-      [String]
-      $OutputFolder,
+    [Parameter(Mandatory=$false,HelpMessage='Destination folder for reports',
+    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [ValidateScript({Test-Path -Path $_ -PathType Container -IsValid})]
+    [String]
+    $OutputFolder,
 
-      [Parameter(Mandatory=$false,HelpMessage='Show Pester Tests on console',
-      ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-      [ValidateSet('All','Context','Default','Describe','Failed','Fails','Header','Inconclusive','None','Passed','Pending','Skipped','Summary')]
-      [String]
-      $Show
-    )
-    process{
-      $pOVFTestsParams = @{}
-      if($PSBoundParameters.ContainsKey('POVFConfiguration')){
-        $pOVFTestsParams.POVFConfiguration = $POVFConfiguration
-      }
-      else {
-        $configurationModulePath = "$PSScriptRoot\..\Configuration\AD\AD.ServiceConfiguration.json"
-        $pOVFTestsParams.POVFConfiguration = Get-ConfigurationData -ConfigurationPath $configurationModulePath -OutputType PSObject
-      }
-      if($PSBoundParameters.ContainsKey('DiagnosticsFolder')){
-        $pOVFTestsParams.DiagnosticsFolder = $DiagnosticsFolder
-      }
-      else {
-        $pOVFTestsParams.DiagnosticsFolder = "$PSScriptRoot\..\Diagnostics\AD"
-      }
-      if($PSBoundParameters.ContainsKey('WriteToEventLog')){
-        $pOVFTestsParams.WriteToEventLog = $true
-        $pOVFTestsParams.EventSource = $EventSource
-        $pOVFTestsParams.EventIDBase = $EventIDBase
-      }
-      if($PSBoundParameters.ContainsKey('OutputFolder')){
-        $pOVFTestsParams.OutputFolder = $OutputFolder
-      }
-      if($PSBoundParameters.ContainsKey('Show')){
-        $pOVFTestsParams.Show = $Show
-      }
-      Invoke-POVFTests @pOVFTestsParams
+    [Parameter(Mandatory=$false,HelpMessage='Show Pester Tests on console',
+    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [ValidateSet('All','Context','Default','Describe','Failed','Fails','Header','Inconclusive','None','Passed','Pending','Skipped','Summary')]
+    [String]
+    $Show,
+
+    [Parameter(Mandatory=$false,
+    ValueFromPipeline,ValueFromPipelineByPropertyName)]
+    [System.Management.Automation.Credential()][System.Management.Automation.PSCredential]
+    $Credential,
+
+    [Parameter(Mandatory=$false,HelpMessage='test type for Pester ',
+    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [ValidateSet('Simple','Comprehensive')]
+    [string[]]
+    $TestType = @('Simple','Comprehensive'),
+
+    [Parameter(Mandatory=$false,HelpMessage='Tag for Pester ',
+    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [ValidateSet('Operational','Configuration')]
+    [string[]]
+    $Tag
+    
+    #$JEAEndpoint
+  )
+  process{
+    #region parameters Initialize 
+    #region param regular 
+    $pOVFTestParams = @{}
+    if($PSBoundParameters.ContainsKey('WriteToEventLog')){
+      $pOVFTestParams.WriteToEventLog = $true
+      $pOVFTestParams.EventSource = $EventSource
+      $pOVFTestParams.EventIDBase = $EventIDBase
     }
+    if($PSBoundParameters.ContainsKey('OutputFolder')){
+      $pOVFTestParams.OutputFolder = $OutputFolder
+    }
+    if($PSBoundParameters.ContainsKey('Show')){
+      $pOVFTestParams.Show = $Show
+    }
+    if($PSBoundParameters.ContainsKey('Tag')){
+      $pOVFTestParams.Tag = $Tag
+    }
+    #endregion
+    #region select Root folder tests
+    if($PSBoundParameters.ContainsKey('DiagnosticsFolder')){
+      $paramDiagnosticFolder = $DiagnosticsFolder
+    }
+    else {
+      $paramDiagnosticFolder = "$PSScriptRoot\..\Diagnostics\AD"
+    }
+    #endregion
+    #region param POVFConfiguration
+    if($PSBoundParameters.ContainsKey('POVFConfigurationFolder')){
+      $pOVFConfigurationFolderFinal = $POVFConfigurationFolder
+    }
+    else {
+      $pOVFConfigurationFolderFinal = "$PSScriptRoot\..\ConfigurationExample\AD"
+    }
+    Write-Log -Info -Message "Will read service configuration from {$pOVFConfigurationFolderFinal}"
+    #endregion
+    #region Global Service Configuration
+    $serviceConfigurationFile = Join-Path -Path $pOVFConfigurationFolderFinal -ChildPath 'AD.objectivity.ServiceConfiguration.json'
+    if ($serviceConfigurationFile){
+      $serviceConfiguration = Get-ConfigurationData -ConfigurationPath $serviceConfigurationFile -OutputType PSObject
+    }
+    #endregion
+    #region Nodes configuration 
+    <#$nodes = Get-ChildItem -Path $pOVFConfigurationFolderFinal -Directory
+      if ($nodes) { 
+        $nodesConfiguration = @()
+        $nodesConfiguration = foreach ($node in $nodes) {
+          $nodeConfigurationFile = Get-ChildItem -Path "$($node.FullName)\*" -include '*.psd1','*.json'
+          if ($nodeConfigurationFile) {
+            foreach ($file in $nodeConfigurationFile) {  
+              Get-ConfigurationData -ConfigurationPath $file.FullName -OutputType PSObject
+            }
+          }
+        }
+      }
+      #>
+    #endregion
+    #endregion
+    #region Invoke tests
+    switch ($TestType) {
+      'Simple' {
+        Write-Log -Info -Message 'Performing {Simple Tests}'
+        $testDirectory = Join-Path -Path $paramDiagnosticFolder -ChildPath 'Simple'
+        $testFiles = Get-ChildItem -Path $testDirectory -File -Filter '*.Tests.ps1'
+        if ($testFiles) { 
+          foreach ($testFile in $testFiles) { 
+        #region POVF.ClusterOperationalStatus.Simple.Tests.ps1
+            $pOVFTestParams.POVFTestFileParameters =@{ 
+              POVFConfiguration = $serviceConfiguration
+              POVFCredential = $Credential
+            }
+            Invoke-POVFTest @pOVFTestParams -POVFTestFile $testFile.FullName
+          }
+        }
+        #endregion
+      }
+      'Comprehensive' { 
+        Write-Log -Info -Message 'Performing {Comprehensive Tests}'
+        
+        #>
+        #endregion
+      }
+    }
+    #endregion
   }
+  end{
+    #Get-PSSession | Remove-PSSession -ErrorAction SilentlyContinue   
+  }
+}

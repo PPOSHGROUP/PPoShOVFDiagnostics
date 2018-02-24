@@ -136,7 +136,7 @@ function Invoke-POVFS2DDiagnostics {
       }
       'Comprehensive' { 
         Write-Log -Info -Message 'Performing {Comprehensive Tests}'
-        $testDirectory = Join-Path -Path $paramDiagnosticFolder -ChildPath 'Comprehensive\Nodes'
+        $testDirectory = Join-Path -Path $paramDiagnosticFolder -ChildPath 'Comprehensive'
         $testFiles = Get-ChildItem -Path $testDirectory -File -Filter '*.ps1'
         if ($testFiles) { 
           foreach ($testFile in $testFiles) { 
