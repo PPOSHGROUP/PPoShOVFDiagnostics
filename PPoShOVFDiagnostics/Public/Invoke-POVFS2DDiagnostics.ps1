@@ -136,21 +136,25 @@ function Invoke-POVFS2DDiagnostics {
       }
       'Comprehensive' { 
         Write-Log -Info -Message 'Performing {Comprehensive Tests}'
-        $testDirectory = Join-Path -Path $paramDiagnosticFolder -ChildPath 'Comprehensive'
-        #region POVF.ClusterNodesConfiguration.Comprehensive.Tests
-        foreach ($nodeConfig in $nodesConfiguration) {
-          Write-Log -Info -Message "Processing node: {$($nodeConfig.ComputerName)}"
-          $nodePSSession = New-PSSessionCustom -ComputerName $nodeConfig.ComputerName -Credential $Credential
-          $pOVFTestParams.POVFTestFileParameters =@{ 
-            POVFConfiguration = $nodeConfig
-            POVFPSSession = $nodePSSession
-          }
-          $testFile = Get-ChildItem -Path (Join-Path -Path $testDirectory -ChildPath 'POVF.ClusterNodesConfiguration.Comprehensive.Tests.ps1')
-          if ($testFile) { 
-            Write-Log -Info -Message "Processing: $testFile"
-            $tempOutputfile = "POVF.DHCP.{0}.Node.Comprehensive.Tests" -f $nodeConfig.ComputerName
-            $pOVFTestParams.OutputFile = $tempOutputfile
-            Invoke-POVFTest @pOVFTestParams -POVFTestFile $testFile.FullName
+        $testDirectory = Join-Path -Path $paramDiagnosticFolder -ChildPath 'Comprehensive\Nodes'
+        $testFiles = Get-ChildItem -Path $testDirectory -File -Filter '*.ps1'
+        if ($testFiles) { 
+          foreach ($testFile in $testFiles) { 
+            #region POVF.ClusterNodesConfiguration.Comprehensive.Tests
+            foreach ($nodeConfig in $nodesConfiguration) {
+              Write-Log -Info -Message "Processing node: {$($nodeConfig.ComputerName)}"
+              $nodePSSession = New-PSSessionCustom -ComputerName $nodeConfig.ComputerName -Credential $Credential
+              $pOVFTestParams.POVFTestFileParameters =@{ 
+                POVFConfiguration = $nodeConfig
+                POVFPSSession = $nodePSSession
+              }
+              #$testFile = Get-ChildItem -Path (Join-Path -Path $testDirectory -ChildPath 'POVF.ClusterNodesConfiguration.Comprehensive.Tests.ps1')
+              Write-Log -Info -Message "Processing: $testFile"
+              $outputFilePartName = ($testFile.Name).Trim('.ps1')
+              $tempOutputfile = "{0}.{1}" -f $nodeConfig.ComputerName, $outputFilePartName
+              $pOVFTestParams.OutputFile = $tempOutputfile
+              Invoke-POVFTest @pOVFTestParams -POVFTestFile $testFile.FullName
+            }
           }
         }
         #>
