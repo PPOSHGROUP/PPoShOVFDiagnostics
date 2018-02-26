@@ -3,58 +3,57 @@ function Invoke-POVFADDiagnostics {
   [CmdletBinding()]
   param
   (
-    [Parameter(Mandatory=$false,HelpMessage='Configuration as PSCustomObject',
-    ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
+    [Parameter(Mandatory=$True,HelpMessage='Folder with Service Configuration')]
     [System.String]
-    $POVFConfigurationFolder,
-  
-    [Parameter(Mandatory=$false, HelpMessage='Folder with Pester tests',
-    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-    [ValidateScript({Test-Path -Path $_ -PathType Container})]
+    $ServiceConfiguration,
+
+    [Parameter(Mandatory=$false,HelpMessage='Configuration of Pester tests')]
     [System.String]
-    $DiagnosticsFolder,
+    $POVFDiagnosticsConfigurationData,
   
-    [Parameter(Mandatory=$false,
-    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [Parameter(Mandatory=$false, HelpMessage='Folder with Pester tests')]    
+      [ValidateScript({Test-Path -Path $_ -PathType Container})]
+    [System.String]
+    $POVFDiagnosticsFolder,
+  
+    [Parameter(Mandatory=$false)]
     [switch]
     $WriteToEventLog,
   
-    [Parameter(Mandatory=$false,
-    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [Parameter(Mandatory=$false)]
     [string]
     $EventSource,
   
-    [Parameter(Mandatory=$false,
-    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [Parameter(Mandatory=$false)]
     [int32]
     $EventIDBase,
   
-    [Parameter(Mandatory=$false,HelpMessage='Destination folder for reports',
-    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-    [ValidateScript({Test-Path -Path $_ -PathType Container -IsValid})]
+    [Parameter(Mandatory=$false,HelpMessage='Destination folder for reports')]
+      [ValidateScript({Test-Path -Path $_ -PathType Container -IsValid})]
     [String]
     $OutputFolder,
 
-    [Parameter(Mandatory=$false,HelpMessage='Show Pester Tests on console',
-    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
+    [Parameter(Mandatory=$false,HelpMessage='Report File prefix')]
+      [ValidateNotNullOrEmpty()]
+    [String]
+    $ReportFilePrefix,
+
+    [Parameter(Mandatory=$false,HelpMessage='Show Pester Tests on console')]
     [ValidateSet('All','Context','Default','Describe','Failed','Fails','Header','Inconclusive','None','Passed','Pending','Skipped','Summary')]
     [String]
     $Show,
 
-    [Parameter(Mandatory=$false,
-    ValueFromPipeline,ValueFromPipelineByPropertyName)]
-    [System.Management.Automation.Credential()][System.Management.Automation.PSCredential]
+    [Parameter(Mandatory=$false)]
+    [System.Management.Automation.PSCredential]
     $Credential,
 
-    [Parameter(Mandatory=$false,HelpMessage='test type for Pester ',
-    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-    [ValidateSet('Simple','Comprehensive')]
+    [Parameter(Mandatory=$false,HelpMessage='test type for Pester')]
+      [ValidateSet('Simple','Comprehensive')]
     [string[]]
     $TestType = @('Simple','Comprehensive'),
 
-    [Parameter(Mandatory=$false,HelpMessage='Tag for Pester ',
-    ValueFromPipeline=$True,ValueFromPipelineByPropertyName=$True)]
-    [ValidateSet('Operational','Configuration')]
+    [Parameter(Mandatory=$false,HelpMessage='Tag for Pester')]
+      [ValidateSet('Operational','Configuration')]
     [string[]]
     $Tag
     
@@ -63,7 +62,9 @@ function Invoke-POVFADDiagnostics {
   process{
     #region parameters Initialize 
     #region param regular 
-    $pOVFTestParams = @{}
+    $pOVFTestParams = @{
+      POVFTestFileParameters=@{}
+    }
     if($PSBoundParameters.ContainsKey('WriteToEventLog')){
       $pOVFTestParams.WriteToEventLog = $true
       $pOVFTestParams.EventSource = $EventSource
@@ -79,74 +80,82 @@ function Invoke-POVFADDiagnostics {
       $pOVFTestParams.Tag = $Tag
     }
     #endregion
-    #region select Root folder tests
-    if($PSBoundParameters.ContainsKey('DiagnosticsFolder')){
-      $paramDiagnosticFolder = $DiagnosticsFolder
+    #region Configuration File matching Diagnostics Tests to AllNodes and NonNodeData
+    if($PSBoundParameters.ContainsKey('POVFDiagnosticsConfigurationData')){
+      $paramPOVFDiagnosticsConfigurationData = $POVFDiagnosticsConfigurationData
     }
     else {
-      $paramDiagnosticFolder = "$PSScriptRoot\..\Diagnostics\AD"
+      $paramPOVFDiagnosticsConfigurationData = "$PSScriptRoot\..\Configuration\AD"
     }
+    Write-Log -Info -Message "Will read Diagnostics Configuration from {$paramPOVFDiagnosticsConfigurationData}"
     #endregion
-    #region param POVFConfiguration
-    if($PSBoundParameters.ContainsKey('POVFConfigurationFolder')){
-      $pOVFConfigurationFolderFinal = $POVFConfigurationFolder
+    #region select folder with Pester tests
+    if($PSBoundParameters.ContainsKey('POVFDiagnosticsFolder')){
+      $paramPOVFDiagnosticFolder = $POVFDiagnosticsFolder
     }
     else {
-      $pOVFConfigurationFolderFinal = "$PSScriptRoot\..\ConfigurationExample\AD"
+      $paramPOVFDiagnosticFolder = "$PSScriptRoot\..\Diagnostics\AD"
     }
-    Write-Log -Info -Message "Will read service configuration from {$pOVFConfigurationFolderFinal}"
+    Write-Log -Info -Message "Will read Diagnostics Tests from {$paramPOVFDiagnosticFolder}"
     #endregion
-    #region Global Service Configuration
-    $serviceConfigurationFile = Join-Path -Path $pOVFConfigurationFolderFinal -ChildPath 'AD.objectivity.ServiceConfiguration.json'
-    if ($serviceConfigurationFile){
-      $serviceConfiguration = Get-ConfigurationData -ConfigurationPath $serviceConfigurationFile -OutputType PSObject
+    #region Service Configuration (i.e. DHCP, AD)
+    if($PSBoundParameters.ContainsKey('ServiceConfiguration')){
+      $paramServiceConfiguration = $ServiceConfiguration
     }
+    else {
+      $paramServiceConfiguration = "$PSScriptRoot\..\ConfigurationExample\AD"
+    }
+    Write-Log -Info -Message "Will read service configuration from {$paramServiceConfiguration}"
     #endregion
-    #region Nodes configuration 
-    <#$nodes = Get-ChildItem -Path $pOVFConfigurationFolderFinal -Directory
-      if ($nodes) { 
-        $nodesConfiguration = @()
-        $nodesConfiguration = foreach ($node in $nodes) {
-          $nodeConfigurationFile = Get-ChildItem -Path "$($node.FullName)\*" -include '*.psd1','*.json'
-          if ($nodeConfigurationFile) {
-            foreach ($file in $nodeConfigurationFile) {  
-              Get-ConfigurationData -ConfigurationPath $file.FullName -OutputType PSObject
-            }
-          }
-        }
-      }
-      #>
+    #region Gather Full Configuration
+    $paramPOVFConfiguration = Get-POVFConfiguration -POVFServiceConfiguration $paramServiceConfiguration -POVFDiagnosticsFolder $paramPOVFDiagnosticFolder
+    $paramPOVFDiagnosticsConfiguration = Get-ConfigurationData -ConfigurationPath $paramPOVFDiagnosticsConfigurationData
     #endregion
-    #endregion
-    #region Invoke tests
-    switch ($TestType) {
-      'Simple' {
-        Write-Log -Info -Message 'Performing {Simple Tests}'
-        $testDirectory = Join-Path -Path $paramDiagnosticFolder -ChildPath 'Simple'
-        $testFiles = Get-ChildItem -Path $testDirectory -File -Filter '*.Tests.ps1'
-        if ($testFiles) { 
-          foreach ($testFile in $testFiles) { 
-            $pOVFTestParams.POVFTestFileParameters =@{ 
-            POVFConfiguration = $serviceConfiguration
+
+    
+    ###################################
+    #region Tests
+
+    foreach ($test in $TestType) {
+      Write-Log -Info -Message "Performing {$test} Tests"
+      foreach ($diagnostic in $paramPOVFConfiguration.Diagnostics.$test) { 
+        #Get Test parameters from Diagnostics Configuration
+        $testName =  Split-Path -Path $diagnostic -Leaf
+        $testParams = $paramPOVFDiagnosticsConfiguration.$test | Where-Object {$PSItem.DiagnosticFile -eq $testName}
+        if($testParams.Configuration -eq 'NonNodeData') {
+          $pOVFTestParams.POVFTestFileParameters =@{ 
+            POVFConfiguration = $paramPOVFConfiguration.Configuration.NonNodeData
             POVFCredential = $Credential
           }
+
           if($pOVFTestParams.OutputFolder){
             $timestamp = Get-Date -Format 'yyyyMMdd_HHmm'
-            $fileNameTemp = ($testFile.Name).Trim('.ps1')
-            $outputFileName = "AD_{0}_Simple_{1}_{2}." -f $serviceConfiguration.Forest.FQDN,'FileName',$timestamp
+            $fileNameTemp = (split-Path $testParams.DiagnosticFile -Leaf).replace('.ps1','')
+            $outputFileName = "{0}_{1}_{2}_PesterResults.xml" -f $ReportFilePrefix ,$timestamp , $fileNameTemp 
             $pOVFTestParams.OutputFile = $outputFileName
           }
-            
-          Invoke-POVFTest @pOVFTestParams -POVFTestFile $testFile.FullName
-          }
+              
+          Invoke-POVFTest @pOVFTestParams -POVFTestFile $diagnostic
+
         }
-        #endregion
-      }
-      'Comprehensive' { 
-        Write-Log -Info -Message 'Performing {Comprehensive Tests}'
-        
-        #>
-        #endregion
+        elseif($testParams.Configuration -eq 'AllNodes'){ 
+          foreach ($node in $paramPOVFConfiguration.Configuration.AllNodes) {
+            $pOVFTestParams.POVFTestFileParameters =@{ 
+              POVFConfiguration = $node
+              POVFCredential = $Credential
+            }
+
+            if($pOVFTestParams.OutputFolder){
+              $timestamp = Get-Date -Format 'yyyyMMdd_HHmm'
+              $fileNameTemp = 
+              $outputFileName = "{0}_{1}_{2}_PesterResults.xml" -f $ReportFilePrefix, $timestamp, $fileNameTemp 
+              $pOVFTestParams.OutputFile = $outputFileName
+            }
+              
+            Invoke-POVFTest @pOVFTestParams -POVFTestFile $diagnostic
+          }
+
+        }
       }
     }
     #endregion
