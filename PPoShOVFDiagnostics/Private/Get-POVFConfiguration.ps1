@@ -1,4 +1,23 @@
 function Get-POVFConfiguration {
+  <#
+  .SYNOPSIS
+  Short description
+  
+  .DESCRIPTION
+  Long description
+  
+  .PARAMETER POVFServiceConfiguration
+  Parameter description
+  
+  .PARAMETER POVFDiagnosticsFolder
+  Parameter description
+  
+  .EXAMPLE
+  An example
+  
+  .NOTES
+  General notes
+  #>
   [CmdletBinding()]
   param (
 
@@ -7,18 +26,12 @@ function Get-POVFConfiguration {
       [ValidateScript({Test-Path -Path $PSItem})]
     [System.String]
     $POVFServiceConfiguration,
-  
-    [Parameter(Mandatory)]
-      [ValidateNotNullOrEmpty()]
-      [ValidateScript({Test-Path -Path $PSItem})]
-    [System.String]
-    $POVFDiagnosticsConfiguration,
 
     [Parameter(Mandatory)]
       [ValidateNotNullOrEmpty()]
       [ValidateScript({Test-Path -Path $PSItem})]
     [System.String]
-    $POVFDiagnosticsTestsFolder
+    $POVFDiagnosticsFolder
   )
 
   process {
@@ -33,38 +46,21 @@ function Get-POVFConfiguration {
       }
     }
 
-    $diagnosticsConfiguration = Get-ConfigurationData -ConfigurationPath $POVFDiagnosticsConfiguration -OutputType HashTable
-    $testFilesSimple = Get-ChildItem -Path $POVFDiagnosticsTestsFolder\Simple -Filter '*.Tests.ps1'
-    $testFilesComprehensive = Get-ChildItem -Path $POVFDiagnosticsTestsFolder\Comprehensive -Filter '*.Tests.ps1'
+    #region Get Diagnostics Tests files
+    $POVFData.Diagnostics.Simple += (Get-ChildItem -Path (Join-Path -Path $POVFDiagnosticsFolder -ChildPath 'Simple') -Filter '*.Tests.ps1').FullName
+    $POVFData.Diagnostics.Comprehensive += (Get-ChildItem -Path (Join-Path -Path $POVFDiagnosticsFolder -ChildPath 'Comprehensive') -Filter '*.Tests.ps1').FullName
+    #endregion
 
     #region Get Service Configuration Data (i.e. your DHCP global configuration)
     $configurationNonNodeDataPath = Join-Path -Path $POVFServiceConfiguration -ChildPath 'NonNodeData'
-    $configurationNonNodeDataFile = Get-ChildItem -Path "$($configurationNonNodeDataPath)\*" -Include  '*.psd1','*.json'
-    if ($configurationNonNodeDataFile) {
-      $POVFData.Configuration.NonNodeData += ForEach ($file in $configurationNonNodeDataFile) { 
-        Get-ConfigurationData -ConfigurationPath $file.FullName -OutputType HashTable
-      }
-    }
+    $POVFData.Configuration.NonNodeData +=  Get-ConfigurationData -ConfigurationPath $configurationNonNodeDataPath -OutputType HashTable
     #endregion
 
     #region Get Service Nodes Configuration Data (i.e. your DHCP servers specific configuration)
     $configurationAllNodesPath = Join-Path -Path $POVFServiceConfiguration -ChildPath 'AllNodes'
-    $configurationAllNodesFile = Get-ChildItem -Path "$($configurationAllNodesPath)\*" -Include  '*.psd1','*.json'
-    if ($configurationAllNodesFile) {
-      $POVFData.Configuration.AllNodes += ForEach ($file in $configurationAllNodesFile) { 
-        Get-ConfigurationData -ConfigurationPath $file.FullName -OutputType HashTable
-      }
-      if ($configurationNonNodeData) {
-        $POVFData.Configuration.NonNodeData += $configurationNonNodeData
-      }
-    }
+    $POVFData.Configuration.AllNodes += Get-ConfigurationData -ConfigurationPath $configurationAllNodesPath -OutputType HashTable
     #endregion
 
-
-
-   
-
+    $POVFData
   }
-        
-
 }
