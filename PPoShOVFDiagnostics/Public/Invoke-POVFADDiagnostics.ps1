@@ -126,12 +126,18 @@ function Invoke-POVFADDiagnostics {
         $testFiles = Get-ChildItem -Path $testDirectory -File -Filter '*.Tests.ps1'
         if ($testFiles) { 
           foreach ($testFile in $testFiles) { 
-        #region POVF.ClusterOperationalStatus.Simple.Tests.ps1
             $pOVFTestParams.POVFTestFileParameters =@{ 
-              POVFConfiguration = $serviceConfiguration
-              POVFCredential = $Credential
-            }
-            Invoke-POVFTest @pOVFTestParams -POVFTestFile $testFile.FullName
+            POVFConfiguration = $serviceConfiguration
+            POVFCredential = $Credential
+          }
+          if($pOVFTestParams.OutputFolder){
+            $timestamp = Get-Date -Format 'yyyyMMdd_HHmm'
+            $fileNameTemp = ($testFile.Name).Trim('.ps1')
+            $outputFileName = "AD_{0}_Simple_{1}_{2}." -f $serviceConfiguration.Forest.FQDN,'FileName',$timestamp
+            $pOVFTestParams.OutputFile = $outputFileName
+          }
+            
+          Invoke-POVFTest @pOVFTestParams -POVFTestFile $testFile.FullName
           }
         }
         #endregion
