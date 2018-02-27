@@ -5,7 +5,7 @@ param (
 
 Describe "DHCP Reservations Settings on Server {$($POVFConfigurationReservations.ComputerName)}" -Tags Reservations,Configuration {
     Context "Check Reservations Settings" {
-        $currentReservations = Get-DhcpServerv4Reservation
+       # $currentReservations = Get-DhcpServerv4Reservation
         It "Count should match configuration" {
 
         }

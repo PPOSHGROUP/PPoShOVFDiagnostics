@@ -4,7 +4,7 @@
 )
 Describe "Verify Active Directory services in forest {$($POVFConfiguration.Forest.FQDN)}" -Tag 'Operational' {
   $queryParams = @{
-    Server = $POVFConfiguration.Forest.SchemaMaster 
+    Server = $POVFConfiguration.Forest.FSMORoles.SchemaMaster
     Credential = $POVFCredential
   }
   $ADCurrentForest = Get-ADForest @queryParams
