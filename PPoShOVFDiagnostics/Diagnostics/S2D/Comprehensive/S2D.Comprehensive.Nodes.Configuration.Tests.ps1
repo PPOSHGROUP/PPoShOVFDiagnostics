@@ -99,14 +99,7 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
 Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($POVFConfiguration.ClusterName)} NetQos Configuration Status" -Tags @('Configuration','NetQoS') {
   Context "Verify NetQos Policies Configuration" { 
     $hostQosPolicies = Invoke-Command -Session $POVFPSSession -ScriptBlock { 
-      Get-NetQosPolicy | ForEach-Object {
-        [pscustomobject]@{
-          Name = $PSItem.Name
-          PriorityValue8021Action = $PSItem.PriorityValue8021Action
-          NetDirectPortMatchCondition =$PSItem.NetDirectPortMatchCondition
-          IPProtocolMatchCondition =$PSItem.IPProtocolMatchCondition
-        } 
-      }
+      Get-NetQosPolicy 
     }
     if ($POVFConfiguration.NetQos.NetQosPolicies){
       foreach ($cQoSPolicy in ($POVFConfiguration.NetQos.NetQosPolicies| Where-Object {$PSItem.Name -notmatch 'Default'})) {
@@ -157,7 +150,7 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
   }
   Context 'Verify NetQos Flow Control configuration' { 
     $hostQosFlowControl = Invoke-Command -Session $POVFPSSession -ScriptBlock { 
-      Get-NetQosFlowControl | Select-Object Enabled, Priority
+      Get-NetQosFlowControl
     }
     foreach ($hQosFlowContrlEntry in ($hostQosFlowControl | Where-Object {$PSItem.Enabled -eq $true}) ) {
       it "Verify QosFlowControl priorty {$($hQosFlowContrlEntry.Priority)} - {Enabled}" {

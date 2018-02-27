@@ -8,7 +8,7 @@
     },
     @{
       DiagnosticFile = "DHCP.Simple.General.Operational.Tests.ps1"
-      Parameters = @('POVFConfiguration','POVFCredential')
+      Parameters = @('POVFCredential')
       Configuration = 'NonNodeData'
       Tag = @('Operational')
     }
