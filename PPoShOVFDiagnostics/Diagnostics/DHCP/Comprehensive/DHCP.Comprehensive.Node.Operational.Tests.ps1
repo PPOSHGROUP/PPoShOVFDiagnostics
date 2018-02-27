@@ -1,7 +1,8 @@
 param (
-  $POVFPSSession,
+  $POVFCredential,
   $POVFConfiguration
 )
+$POVFPSSession = New-PSSessionCustom -ComputerName $POVFConfiguration.ComputerName -Credential $POVFCredential -SessionName 'POVF'
 Describe "DHCP Service settings on Server {$($POVFConfiguration.ComputerName)}" -Tags @('Operational','Configuration') {
   Context 'Verify service configuration' {
     it "DNS Credentials should match configuration {$($POVFConfiguration.DHCPServerDNSCredentials)}" {
@@ -79,3 +80,4 @@ Describe "Reservation Tests on Server {$($POVFConfiguration.ComputerName)}" -Tag
     }
   }
 }
+Get-PSSession -Name 'POVF*' | Remove-PSSession -ErrorAction SilentlyContinue 

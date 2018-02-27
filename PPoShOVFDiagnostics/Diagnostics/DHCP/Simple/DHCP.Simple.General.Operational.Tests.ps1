@@ -2,8 +2,10 @@ param (
    $POVFConfiguration,
    $POVFCredential
 )
-Describe 'Testing authorized DHCP servers in Active Directory' -Tag 'Operational'{ 
+Describe 'Testing authorized DHCP servers in Active Directory' -Tag 'Operational'{
+  
   Context 'Verify DHCP servers operational status' {
+    Invoke-Command 
     $dhcpFromAD = Get-DhcpServerInDC | Select-Object -ExpandProperty DNSName
     Foreach ($dhcp in $dhcpFromAD) {
       it "Verify if DHCP {$dhcp} is recheable" {

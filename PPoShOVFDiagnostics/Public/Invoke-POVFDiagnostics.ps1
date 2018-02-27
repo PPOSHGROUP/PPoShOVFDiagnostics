@@ -1,4 +1,4 @@
-function Invoke-POVFADDiagnostics {
+function Invoke-POVFDiagnostics {
   
   [CmdletBinding()]
   param
@@ -7,15 +7,19 @@ function Invoke-POVFADDiagnostics {
     [System.String]
     $ServiceConfiguration,
 
-    [Parameter(Mandatory=$false,HelpMessage='Service to test')]
+    [Parameter(Mandatory=$true,HelpMessage='Service to test',
+      ParameterSetName='ServiceName')]
+      [ValidateSet('AD','DHCP','GPO','LAPS','S2D')]
     [System.String]
-    $ServiceName,
+    $POVFServiceName,
 
-    [Parameter(Mandatory=$false,HelpMessage='Configuration of Pester tests')]
+    [Parameter(Mandatory=$true,HelpMessage='Configuration of Pester tests',
+      ParameterSetName='POVFFolder')]
     [System.String]
     $POVFDiagnosticsConfigurationData,
   
-    [Parameter(Mandatory=$false, HelpMessage='Folder with Pester tests')]    
+    [Parameter(Mandatory=$true, HelpMessage='Folder with Pester tests',
+      ParameterSetName='POVFFolder')]    
       [ValidateScript({Test-Path -Path $_ -PathType Container})]
     [System.String]
     $POVFDiagnosticsFolder,
@@ -57,7 +61,6 @@ function Invoke-POVFADDiagnostics {
     $TestType = @('Simple','Comprehensive'),
 
     [Parameter(Mandatory=$false,HelpMessage='Tag for Pester')]
-      [ValidateSet('Operational','Configuration')]
     [string[]]
     $Tag
     
@@ -84,11 +87,40 @@ function Invoke-POVFADDiagnostics {
       $pOVFTestParams.Tag = $Tag
     }
     #endregion
+    #region Configuration File matching Diagnostics Tests to AllNodes and NonNodeData
+    if($PSBoundParameters.ContainsKey('POVFDiagnosticsConfigurationData')){
+      $paramPOVFDiagnosticsConfigurationData = $POVFDiagnosticsConfigurationData
+    }
     
     #endregion
+    #region select folder with Pester tests
+    if($PSBoundParameters.ContainsKey('POVFDiagnosticsFolder')){
+      $paramPOVFDiagnosticsFolder = $POVFDiagnosticsFolder
+    }
+    
+    #endregion
+    #region Service Configuration (i.e. DHCP, AD)
+    if($PSBoundParameters.ContainsKey('ServiceConfiguration')){
+      $paramServiceConfiguration = $ServiceConfiguration
+    }
+       
+    #endregion
+    #region
+    if($PSBoundParameters.ContainsKey('POVFServiceName')){
+      $rootPath = Get-Item -Path "$PSScriptRoot\.." 
+      $paramPOVFDiagnosticsConfigurationData = "$rootPath\Configuration\$POVFServiceName"
+      $paramPOVFDiagnosticsFolder = "$rootPath\Diagnostics\$POVFServiceName"
+      if(-not ($PSBoundParameters.ContainsKey('ServiceConfiguration'))){ 
+        $paramServiceConfiguration = "$rootPath\ConfigurationExample\$POVFServiceName"
+      }
+    }
+    Write-Log -Info -Message "Will read Diagnostics Configuration Data from {$paramPOVFDiagnosticsConfigurationData}"
+    Write-Log -Info -Message "Will read Diagnostics Tests from {$paramPOVFDiagnosticsFolder}"
+    Write-Log -Info -Message "Will read service configuration from {$paramServiceConfiguration}"
+    #endregion
     #region Gather Full Configuration
-    $paramPOVFConfiguration = Get-POVFConfiguration -POVFServiceConfiguration $ServiceConfiguration -POVFDiagnosticsFolder $POVFDiagnosticsFolder
-    $paramPOVFDiagnosticsConfiguration = Get-ConfigurationData -ConfigurationPath $POVFDiagnosticsConfigurationData
+    $paramPOVFDiagnosticsConfiguration = Get-ConfigurationData -ConfigurationPath $paramPOVFDiagnosticsConfigurationData
+    $paramPOVFConfiguration = Get-POVFConfiguration -POVFServiceConfiguration $paramServiceConfiguration -POVFDiagnosticsFolder $paramPOVFDiagnosticsFolder
     #endregion
 
     
@@ -104,12 +136,10 @@ function Invoke-POVFADDiagnostics {
         $testParams = $paramPOVFDiagnosticsConfiguration.$test | Where-Object {$PSItem.DiagnosticFile -eq $testName}
         #iterate through NonNodeData - General configuration of service
         if($testParams.Configuration -eq 'NonNodeData') {
-          #TODO - generate different parameters like Credentials/Sessions if needed
           $pOVFTestParams.POVFTestFileParameters =@{ 
             POVFConfiguration = $paramPOVFConfiguration.Configuration.NonNodeData
             POVFCredential = $Credential
           }
-
           if($pOVFTestParams.OutputFolder){
             $timestamp = Get-Date -Format 'yyyyMMdd_HHmm'
             $fileNameTemp = (split-Path $testParams.DiagnosticFile -Leaf).replace('.ps1','')
@@ -123,7 +153,6 @@ function Invoke-POVFADDiagnostics {
         #iterate through AllNodes - each node configuration 
         elseif($testParams.Configuration -eq 'AllNodes'){ 
           foreach ($node in $paramPOVFConfiguration.Configuration.AllNodes) {
-            #TODO - generate different parameters like Credentials/Sessions if needed
             $pOVFTestParams.POVFTestFileParameters =@{ 
               POVFConfiguration = $node
               POVFCredential = $Credential
@@ -144,6 +173,6 @@ function Invoke-POVFADDiagnostics {
     #endregion
   }
   end{
-    #Get-PSSession | Remove-PSSession -ErrorAction SilentlyContinue   
+     
   }
 }
