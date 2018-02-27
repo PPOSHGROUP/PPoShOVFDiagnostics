@@ -7,6 +7,10 @@ function Invoke-POVFADDiagnostics {
     [System.String]
     $ServiceConfiguration,
 
+    [Parameter(Mandatory=$false,HelpMessage='Service to test')]
+    [System.String]
+    $ServiceName,
+
     [Parameter(Mandatory=$false,HelpMessage='Configuration of Pester tests')]
     [System.String]
     $POVFDiagnosticsConfigurationData,
@@ -80,36 +84,11 @@ function Invoke-POVFADDiagnostics {
       $pOVFTestParams.Tag = $Tag
     }
     #endregion
-    #region Configuration File matching Diagnostics Tests to AllNodes and NonNodeData
-    if($PSBoundParameters.ContainsKey('POVFDiagnosticsConfigurationData')){
-      $paramPOVFDiagnosticsConfigurationData = $POVFDiagnosticsConfigurationData
-    }
-    else {
-      $paramPOVFDiagnosticsConfigurationData = "$PSScriptRoot\..\Configuration\AD"
-    }
-    Write-Log -Info -Message "Will read Diagnostics Configuration from {$paramPOVFDiagnosticsConfigurationData}"
-    #endregion
-    #region select folder with Pester tests
-    if($PSBoundParameters.ContainsKey('POVFDiagnosticsFolder')){
-      $paramPOVFDiagnosticFolder = $POVFDiagnosticsFolder
-    }
-    else {
-      $paramPOVFDiagnosticFolder = "$PSScriptRoot\..\Diagnostics\AD"
-    }
-    Write-Log -Info -Message "Will read Diagnostics Tests from {$paramPOVFDiagnosticFolder}"
-    #endregion
-    #region Service Configuration (i.e. DHCP, AD)
-    if($PSBoundParameters.ContainsKey('ServiceConfiguration')){
-      $paramServiceConfiguration = $ServiceConfiguration
-    }
-    else {
-      $paramServiceConfiguration = "$PSScriptRoot\..\ConfigurationExample\AD"
-    }
-    Write-Log -Info -Message "Will read service configuration from {$paramServiceConfiguration}"
+    
     #endregion
     #region Gather Full Configuration
-    $paramPOVFConfiguration = Get-POVFConfiguration -POVFServiceConfiguration $paramServiceConfiguration -POVFDiagnosticsFolder $paramPOVFDiagnosticFolder
-    $paramPOVFDiagnosticsConfiguration = Get-ConfigurationData -ConfigurationPath $paramPOVFDiagnosticsConfigurationData
+    $paramPOVFConfiguration = Get-POVFConfiguration -POVFServiceConfiguration $ServiceConfiguration -POVFDiagnosticsFolder $POVFDiagnosticsFolder
+    $paramPOVFDiagnosticsConfiguration = Get-ConfigurationData -ConfigurationPath $POVFDiagnosticsConfigurationData
     #endregion
 
     
@@ -118,11 +97,14 @@ function Invoke-POVFADDiagnostics {
 
     foreach ($test in $TestType) {
       Write-Log -Info -Message "Performing {$test} Tests"
+      #iterate through *.Tests.ps1 from Diagnostics folder
       foreach ($diagnostic in $paramPOVFConfiguration.Diagnostics.$test) { 
         #Get Test parameters from Diagnostics Configuration
         $testName =  Split-Path -Path $diagnostic -Leaf
         $testParams = $paramPOVFDiagnosticsConfiguration.$test | Where-Object {$PSItem.DiagnosticFile -eq $testName}
+        #iterate through NonNodeData - General configuration of service
         if($testParams.Configuration -eq 'NonNodeData') {
+          #TODO - generate different parameters like Credentials/Sessions if needed
           $pOVFTestParams.POVFTestFileParameters =@{ 
             POVFConfiguration = $paramPOVFConfiguration.Configuration.NonNodeData
             POVFCredential = $Credential
@@ -134,12 +116,14 @@ function Invoke-POVFADDiagnostics {
             $outputFileName = "{0}_{1}_{2}_PesterResults.xml" -f $ReportFilePrefix ,$timestamp , $fileNameTemp 
             $pOVFTestParams.OutputFile = $outputFileName
           }
-              
+          #Invoke Pester tests    
           Invoke-POVFTest @pOVFTestParams -POVFTestFile $diagnostic
 
         }
+        #iterate through AllNodes - each node configuration 
         elseif($testParams.Configuration -eq 'AllNodes'){ 
           foreach ($node in $paramPOVFConfiguration.Configuration.AllNodes) {
+            #TODO - generate different parameters like Credentials/Sessions if needed
             $pOVFTestParams.POVFTestFileParameters =@{ 
               POVFConfiguration = $node
               POVFCredential = $Credential
@@ -151,10 +135,9 @@ function Invoke-POVFADDiagnostics {
               $outputFileName = "{0}_{1}_{2}_PesterResults.xml" -f $ReportFilePrefix, $timestamp, $fileNameTemp 
               $pOVFTestParams.OutputFile = $outputFileName
             }
-              
+             #Invoke Pester tests    
             Invoke-POVFTest @pOVFTestParams -POVFTestFile $diagnostic
           }
-
         }
       }
     }
