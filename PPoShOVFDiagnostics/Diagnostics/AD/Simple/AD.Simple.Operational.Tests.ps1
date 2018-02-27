@@ -1,6 +1,6 @@
 ﻿param(
     $POVFConfiguration,
-    $POVFCredential
+    [System.Management.Automation.PSCredential]$POVFCredential
 )
 Describe "Verify Active Directory services in forest {$($POVFConfiguration.Forest.FQDN)}" -Tag 'Operational' {
   $queryParams = @{
@@ -24,7 +24,7 @@ Describe "Verify Active Directory services in forest {$($POVFConfiguration.Fores
         Should Not BeNullOrEmpty
       }
       it "Verify Domain Controller {$globalCatalog} has no replication failures" {
-        (Get-ADReplicationFailure -Target $globalCatalog -Credential $credAD) | ForEach-Object {
+        (Get-ADReplicationFailure -Target $globalCatalog -Credential $POVFCredential) | ForEach-Object {
           $PSItem.FailureCount | 
           Should Be 0 }
       }

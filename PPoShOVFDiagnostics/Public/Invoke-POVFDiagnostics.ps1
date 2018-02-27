@@ -160,7 +160,7 @@ function Invoke-POVFDiagnostics {
 
             if($pOVFTestParams.OutputFolder){
               $timestamp = Get-Date -Format 'yyyyMMdd_HHmm'
-              $fileNameTemp = 
+              $fileNameTemp = (split-Path $testParams.DiagnosticFile -Leaf).replace('.ps1','')
               $outputFileName = "{0}_{1}_{2}_PesterResults.xml" -f $ReportFilePrefix, $timestamp, $fileNameTemp 
               $pOVFTestParams.OutputFile = $outputFileName
             }

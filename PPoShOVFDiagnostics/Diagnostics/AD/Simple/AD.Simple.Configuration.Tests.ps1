@@ -1,39 +1,60 @@
 param(
   $POVFConfiguration,
-  $POVFCredential
+  [System.Management.Automation.PSCredential]$POVFCredential
 )
+$queryParams = @{
+  Server = $POVFConfiguration.Forest.SchemaMaster 
+  Credential = $POVFCredential
+}
+$currentADForest = Get-ADForest @queryParams
+#testing domain against config
 Describe 'Active Directory topology check' -Tag 'Configuration'{
-  $ADForest = Get-ADForest
+  
   Context 'Veryfing Forest Configuration' {
-    it "Forest FQDN $($POVFConfiguration.Forest.FQDN)" {
-      $ADForest.RootDomain |
-      Should be $POVFConfiguration.Forest.FQDN
+    it "Forest Name {$($POVFConfiguration.Forest.Name)}" {
+      $currentADForest.Name |
+      Should -be $POVFConfiguration.Forest.Name
     }
-    it "Forest Mode $($POVFConfiguration.Forest.ForestMode)" {
-      $ADForest.ForestMode |
-      Should be $POVFConfiguration.Forest.ForestMode
+    it "Forest Mode {$($POVFConfiguration.Forest.ForestMode)}" {
+      $currentADForest.ForestMode |
+      Should -be $POVFConfiguration.Forest.ForestMode
     }
-    it "Global Catalogs should match configuration file" {
-      $compGCfromConfig = $POVFConfiguration.Forest.GlobalCatalogs -split ','
-      Compare-Object -ReferenceObject $ADForest.GlobalCatalogs -DifferenceObject $compGCfromConfig | should beNullOrEmpty
+    it "Forest Root Domain {$($POVFConfiguration.Forest.RootDomain)}" {
+      $currentADForest.RootDomain |
+      Should -be $POVFConfiguration.Forest.RootDomain
     }
-    it "Schema Master should match configuration file: $($POVFConfiguration.Forest.SchemaMaster)" {
-      $ADForest.SchemaMaster |
-      Should be $POVFConfiguration.Forest.SchemaMaster
+    it "Global Catalogs should match configuration" {
+      #$compGCfromConfig = $POVFConfiguration.Forest.GlobalCatalogs -split ','
+      #Compare-Object -ReferenceObject $ADForest.GlobalCatalogs -DifferenceObject $compGCfromConfig | should beNullOrEmpty
+      $currentADForest.GlobalCatalogs | Should -BeIn $POVFConfiguration.Forest.GlobalCatalogs
+    }
+    it "DomainNaming Master should match configuration file - {$($POVFConfiguration.Forest.DomainNamingMaster)}" {
+      $currentADForest.DomainNamingMaster |
+      Should -Be $POVFConfiguration.Forest.FMSORoles.DomainNamingMaster
+    }
+    it "Schema Master should match configuration file - {$($POVFConfiguration.Forest.SchemaMaster)}" {
+      $currentADForest.SchemaMaster |
+      Should -Be $POVFConfiguration.Forest.FMSORoles.SchemaMaster
     }
   }
   Context 'Veryfing Sites Configuration' {
-    it "Sites should match configuration file" {
-      $sitesfromConfig = $POVFConfiguration.Sites -split ','
-      Compare-Object -ReferenceObject $ADForest.Sites -DifferenceObject $sitesfromConfig | should beNullorEmpty
+    it "Sites should match configuration" {
+      #$sitesfromConfig = $POVFConfiguration.Sites -split ','
+      #Compare-Object -ReferenceObject currentADForest.Sites -DifferenceObject $sitesfromConfig | should beNullorEmpty
+      $currentADForest.Sites | Should -BeIn $POVFConfiguration.Forest.Sites
     }
   }
-  Context 'Veryfing Domain Trusts Configuration' {
-    if ($POVFConfiguration.Trusts) {
-      it "Trust domains {$($POVFConfiguration.Trusts)} should match configuration file" {
-        $trustsfromConfig = $POVFConfiguration.Trusts -split ','
-        $trustsfromAD = Get-ADTrust -filter *| Select-Object -ExpandProperty Name
-        Compare-Object -ReferenceObject $trustsfromAD -DifferenceObject $trustsfromConfig | Should beNullorEmpty
+  Context 'Veryfing Trusts Configuration' {
+    if ($POVFConfiguration.Forest.Trusts) {
+      $currentTrusts = Get-ADTrust -filter * @queryParams
+      foreach ($trust in $currentTrusts ){
+        it "Trust with {$($trust.Name)} should match configuration"
+      }
+      it "Trust  {$($POVFConfiguration.Forest.Trusts)} should match configuration file" {
+        #$trustsfromConfig = $POVFConfiguration.Trusts -split ','
+        
+        #Compare-Object -ReferenceObject $trustsfromAD -DifferenceObject $trustsfromConfig | Should beNullorEmpty
+
       }
     }
     else {
@@ -43,3 +64,5 @@ Describe 'Active Directory topology check' -Tag 'Configuration'{
     }
   }
 }
+#testing config against domain
+#Describe {}
