@@ -1,5 +1,5 @@
 param (
-  $POVFCredential,
+  [System.Management.Automation.PSCredential]$POVFCredential,
   $POVFConfiguration
 )
 $POVFPSSession = New-PSSessionCustom -ComputerName $POVFConfiguration.ComputerName -Credential $POVFCredential -SessionName 'POVF'

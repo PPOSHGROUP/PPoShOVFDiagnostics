@@ -1,6 +1,6 @@
 param(
   $POVFConfiguration,
-  $POVFCredential
+  [System.Management.Automation.PSCredential]$POVFCredential
 )
 $POVFPSSession = New-PSSessionCustom -ComputerName $POVFConfiguration.ComputerName -Credential $POVFCredential -SessionName 'POVF'
 Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($POVFConfiguration.ClusterName)} Basic Network Configuration Status" -Tags @('Configuration','Basic') {

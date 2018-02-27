@@ -1,6 +1,6 @@
 param (
    #$POVFConfiguration,
-   $POVFCredential
+   [System.Management.Automation.PSCredential]$POVFCredential
 )
 Describe 'Testing authorized DHCP servers in Active Directory' -Tag 'Operational'{
   

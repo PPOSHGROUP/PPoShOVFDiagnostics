@@ -1,6 +1,6 @@
 param (
   $POVFConfiguration,
-  $POVFCredential
+  [System.Management.Automation.PSCredential]$POVFCredential
 )
 $POVFPSSession = New-PSSessionCustom -ComputerName $POVFConfiguration.ComputerName -Credential $POVFCredential -SessionName 'POVF'
 Describe "Verifying Cluster {$($POVFConfiguration.ClusterName)} Operational Status" -Tag 'Operational' {
