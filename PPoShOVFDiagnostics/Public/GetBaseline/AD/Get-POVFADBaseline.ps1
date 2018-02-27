@@ -30,7 +30,7 @@ function Get-POVFADBaseline {
         ForestMode = ''
         RootDomain = ''
         GlobalCatalogs = @()
-        FMSORoles = [ordered]@{
+        FSMORoles = [ordered]@{
           SchemaMaster = ''
           DomainNamingMaster = ''
         }
@@ -40,7 +40,7 @@ function Get-POVFADBaseline {
             ChildDomains =@()
             DNSRoot = ''
             DomainMode = ''
-            FMSORoles = @{
+            FSMORoles = @{
               InfrastructureMaster  = ''
               RIDMaster = ''
               PDCEmulator = ''
@@ -89,8 +89,8 @@ function Get-POVFADBaseline {
     $ForestConfig.Forest.Name = $currentADForest.Name
     $ForestConfig.Forest.ForestMode = $currentADForest.ForestMode.ToString()
     $ForestConfig.Forest.RootDomain = $currentADForest.RootDomain
-    $ForestConfig.Forest.FMSORoles.DomainNamingMaster = $currentADForest.DomainNamingMaster
-    $ForestConfig.Forest.FMSORoles.SchemaMaster = $currentADForest.SchemaMaster
+    $ForestConfig.Forest.FSMORoles.DomainNamingMaster = $currentADForest.DomainNamingMaster
+    $ForestConfig.Forest.FSMORoles.SchemaMaster = $currentADForest.SchemaMaster
     $ForestConfig.Forest.GlobalCatalogs += @($currentADForest.GlobalCatalogs)
     #endregion
     #region domain properties
@@ -105,7 +105,7 @@ function Get-POVFADBaseline {
         ChildDomains =@()
         DNSRoot = ''
         DomainMode = ''
-        FMSORoles = @{
+        FSMORoles = @{
           InfrastructureMaster  = ''
           RIDMaster = ''
           PDCEmulator = ''
@@ -128,7 +128,7 @@ function Get-POVFADBaseline {
       $DomainConfig.ChildDomains = @($currentADdomain.ChildDomains)
       $DomainConfig.DNSRoot = $currentADdomain.DNSRoot
       $DomainConfig.DomainMode = $currentADdomain.DomainMode.ToString()
-      $DomainConfig.FMSORoles = @{
+      $DomainConfig.FSMORoles = @{
         InfrastructureMaster  = $currentADdomain.InfrastructureMaster
         RIDMaster = $currentADdomain.RIDMaster
         PDCEmulator = $currentADdomain.PDCEmulator
@@ -154,7 +154,7 @@ function Get-POVFADBaseline {
       $groups = @('Enterprise Admins','Schema Admins')
       $DomainConfig.HighGroups = @()
       foreach ($group in $groups){
-        $groupTemp = Get-ADGroupMember -Identity $group @domainQueryParams | Where-Object {$PSItem.samaccountname -ne 'Administrator'} 
+        $groupTemp = Get-ADGroupMember -Identity $group @domainQueryParams  
         $DomainConfig.HighGroups += [ordered]@{ 
           Name = $group
           Members = @($groupTemp.samaccountname)

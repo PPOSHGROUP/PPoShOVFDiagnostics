@@ -3,7 +3,7 @@ param(
   [System.Management.Automation.PSCredential]$POVFCredential
 )
 $queryParams = @{
-  Server = $POVFConfiguration.Forest.SchemaMaster 
+  Server = $POVFConfiguration.Forest.FSMORoles.SchemaMaster 
   Credential = $POVFCredential
 }
 $currentADForest = Get-ADForest @queryParams
@@ -30,11 +30,11 @@ Describe 'Active Directory topology check' -Tag 'Configuration'{
     }
     it "DomainNaming Master should match configuration file - {$($POVFConfiguration.Forest.DomainNamingMaster)}" {
       $currentADForest.DomainNamingMaster |
-      Should -Be $POVFConfiguration.Forest.FMSORoles.DomainNamingMaster
+      Should -Be $POVFConfiguration.Forest.FSMORoles.DomainNamingMaster
     }
     it "Schema Master should match configuration file - {$($POVFConfiguration.Forest.SchemaMaster)}" {
       $currentADForest.SchemaMaster |
-      Should -Be $POVFConfiguration.Forest.FMSORoles.SchemaMaster
+      Should -Be $POVFConfiguration.Forest.FSMORoles.SchemaMaster
     }
   }
   Context 'Verify Sites Configuration' {
@@ -52,7 +52,7 @@ Describe 'Active Directory topology check' -Tag 'Configuration'{
           $trust.Name | Should -BeIn $POVFConfiguration.Forest.Trusts.Name
         }
         it "Trust {$($trust.Name)} should be {$($trust.Direction)}" {
-          $trust.Direction | Should -Be ($POVFConfiguration.Forest.Trusts| Where-Object {$PSItem.Name -eq $test.Name}).Direction
+          $trust.Direction | Should -Be ($POVFConfiguration.Forest.Trusts | Where-Object {$PSItem.Name -eq $trust.Name}).Direction
         }
       }
     }
@@ -69,36 +69,36 @@ Describe "Verify Domains Configuration" -Tag 'Configuration' {
     $currentADDomainController = Get-ADDomainController -domainName $ADdomain -Discover
     $domainQueryParams = @{
       Server = $currentADDomainController.HostName[0]
-      Credential = $Credential
+      Credential = $POVFCredential
     }
     $currentADDomain = Get-ADDomain @domainQueryParams
-    Context "Verify Domain {$(currentADDomain.DNSRoot)} Configuration" {
-      it "Verify DNSRoot for Domain {$(currentADDomain.DNSRoot)} DNSRoot" {
+    Context "Verify Domain {$($currentADDomain.DNSRoot)} Configuration" {
+      it "Verify DNSRoot for Domain {$($currentADDomain.DNSRoot)} DNSRoot" {
         $currentADDomain.DNSRoot | Should -Be $configADDomain.DNSRoot
       }
       if($currentADDomain.ChildDomains){ 
-        it "Verify ChildDomains for Domain {$(currentADDomain.DNSRoot)}" {
+        it "Verify ChildDomains for Domain {$($currentADDomain.DNSRoot)}" {
           $currentADDomain.ChildDomains | Should -BeIn $configADDomain.ChildDomains
         }
       }
-      it "Verify DomainMode for Domain {$(currentADDomain.DNSRoot)}" {
+      it "Verify DomainMode for Domain {$($currentADDomain.DNSRoot)}" {
         $currentADDomain.DomainMode | Should -Be $configADDomain.DomainMode
       }
-      it "Verify FSMO Roles [InfrastructureMaster] for Domain {$(currentADDomain.DNSRoot)}" {
-        $currentADDomain.InfrastructureMaster | Should -Be $configADDomain.FMSORolesInfrastructureMaster
+      it "Verify FSMO Roles [InfrastructureMaster] for Domain {$($currentADDomain.DNSRoot)}" {
+        $currentADDomain.InfrastructureMaster | Should -Be $configADDomain.FSMORoles.InfrastructureMaster
       }
-      it "Verify FSMO Roles [RIDMaster] for Domain {$(currentADDomain.DNSRoot)}" {
-        $currentADDomain.RIDMaster | Should -Be $configADDomain.RIDMaster
+      it "Verify FSMO Roles [RIDMaster] for Domain {$($currentADDomain.DNSRoot)}" {
+        $currentADDomain.RIDMaster | Should -Be $configADDomain.FSMORoles.RIDMaster
       }
-      it "Verify FSMO Roles [PDCEmulator] for Domain {$(currentADDomain.DNSRoot)}" {
-        $currentADDomain.PDCEmulator | Should -Be $configADDomain.PDCEmulator
+      it "Verify FSMO Roles [PDCEmulator] for Domain {$($currentADDomain.DNSRoot)}" {
+        $currentADDomain.PDCEmulator | Should -Be $configADDomain.FSMORoles.PDCEmulator
       }
       if($currentADDomain.ReadOnlyReplicaDirectoryServers){ 
-        it "Verify ReadOnlyReplicaDirectoryServers for Domain {$(currentADDomain.DNSRoot)}"{
+        it "Verify ReadOnlyReplicaDirectoryServers for Domain {$($currentADDomain.DNSRoot)}"{
           $currentADDomain.ReadOnlyReplicaDirectoryServers | Should -BeIn $configADDomain.ReadOnlyReplicaDirectoryServers
         }
       }
-      it "Verify DHCPServers for Domain {$(currentADDomain.DNSRoot)}" {
+      it "Verify DHCPServers for Domain {$($currentADDomain.DNSRoot)}" {
         $currentDHCPInAD = @( (Get-ADObject @domainQueryParams -SearchBase $searchBase -Filter "objectclass -eq 'dhcpclass' -AND Name -ne 'dhcproot'" ).Name )
         $currentDHCPInAD | Should -BeIn $configADDomain.DHCPServers
       }
