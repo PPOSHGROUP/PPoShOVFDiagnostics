@@ -143,7 +143,10 @@ function Invoke-POVFDiagnostics {
           if($pOVFTestParams.OutputFolder){
             $timestamp = Get-Date -Format 'yyyyMMdd_HHmm'
             $fileNameTemp = (split-Path $testParams.DiagnosticFile -Leaf).replace('.ps1','')
-            $outputFileName = "{0}_{1}_{2}_PesterResults.xml" -f $ReportFilePrefix ,$timestamp , $fileNameTemp 
+            if($PSBoundParameters.ContainsKey('ReportFilePrefix')){
+              $outputFileName = "{0}_{1}_{2}_PesterResults.xml" -f $ReportFilePrefix ,$timestamp , $fileNameTemp 
+            }
+            $outputFileName = "{0}_{1}_PesterResults.xml" -f $timestamp , $fileNameTemp 
             $pOVFTestParams.OutputFile = $outputFileName
           }
           #Invoke Pester tests    
@@ -161,7 +164,10 @@ function Invoke-POVFDiagnostics {
             if($pOVFTestParams.OutputFolder){
               $timestamp = Get-Date -Format 'yyyyMMdd_HHmm'
               $fileNameTemp = (split-Path $testParams.DiagnosticFile -Leaf).replace('.ps1','')
-              $outputFileName = "{0}_{1}_{2}_PesterResults.xml" -f $ReportFilePrefix, $timestamp, $fileNameTemp 
+              if($PSBoundParameters.ContainsKey('ReportFilePrefix')){
+                $outputFileName = "{0}_{1}_{2}_{3}_PesterResults.xml" -f $ReportFilePrefix, $node.ComputerName, $timestamp, $fileNameTemp 
+              }
+              $outputFileName = "{0}_{1}_{2}_PesterResults.xml" -f $node.ComputerName,$timestamp, $fileNameTemp 
               $pOVFTestParams.OutputFile = $outputFileName
             }
              #Invoke Pester tests    
@@ -173,6 +179,5 @@ function Invoke-POVFDiagnostics {
     #endregion
   }
   end{
-     
   }
 }
