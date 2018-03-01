@@ -7,15 +7,40 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
   Context "Verify Network Adapter Properties"{
     foreach ($NIC in $POVFConfiguration.NIC) {
       if($NIC.MACAddress) {
-        it "Verify [baseline] NIC {$($NIC.Name)} MACAddress" {
+        it "Verify [host] NIC {$($NIC.Name)} MACAddress math [baseline]" {
           $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
             Get-NetAdapter -name $USING:NIC.Name -ErrorAction SilentlyContinue 
           }
           $test.MACAddress | Should Be $NIC.MACAddress
         }
       }
+      if($null -ne $NIC.IPConfiguration.IPAddress) {
+        $netAdapterIPConfiguration = Invoke-Command $POVFPSSession -ScriptBlock {
+          Get-NetIPConfiguration | Where-Object {$PSItem.InterfaceAlias -match $USING:NIC.Name} 
+        }
+        it "Verify [host] NIC {$($NIC.Name)} IP Configuration: IPAddress match [baseline]" {
+          $netAdapterIPConfiguration.IPv4Address.IPAddress | Should Be $NIC.IPConfiguration.IPAddress
+        }
+        it "Verify [host] NIC {$($NIC.Name)} IP Configuration: DefaultGateway match [baseline]" {
+          $netAdapterIPConfiguration.IPv4DefaultGateway.NextHop | Should Be $NIC.IPConfiguration.DefaultGateway
+        }
+        it "Verify [host] NIC {$($NIC.Name)} IP Configuration: Prefix match [baseline]" {
+          $netAdapterIPConfiguration.IPv4Address.PrefixLength | Should Be $NIC.IPConfiguration.PrefixLength
+        }
+        it "Verify [host] NIC {$($NIC.Name)} IP Configuration: DNSClientServerAddress match [baseline]" {
+          $DNSServers = if(($netAdapterIPConfiguration.DNSServer | Where-Object {$PSItem.AddressFamily -eq '2'}).ServerAddresses) {
+            #For IPV4 configuration Get-NetIPConfiguration returns AddressFamily -eq 2 for IPv4
+            ($netAdapterIPConfiguration.DNSServer | Where-Object {$PSItem.AddressFamily -eq '2'} | 
+            Select-Object -ExpandProperty ServerAddresses).Split(',')
+          }
+          else {
+            $DNSServers = $null
+          }
+          $DNSServers | Should -BeIn $NIC.IPConfiguration.DNSClientServerAddress
+        }
+      }
       if($NIC.NetLBFOTeam) {
-        it "Verify [baseline] NIC {$($NIC.Name)} Teaming status" {
+        it "Verify [host] NIC {$($NIC.Name)} Teaming status math [baseline]" {
           $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
             Get-NetLBFOTeam -Name $USING:NIC.NetLBFOTeam -ErrorAction SilentlyContinue 
           }
@@ -24,55 +49,64 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
       }
       if($NIC.NetAdapterVMQ.Enabled) {
         $propertyKeys = $NIC.NetAdapterVMQ.Keys
+        $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
+          Get-NetAdapterVMQ -name $USING:NIC.Name -ErrorAction SilentlyContinue 
+        }
         foreach ($key in $propertyKeys) {
-          IT "Verify [baseline] NIC {$($NIC.Name)} NetAdapterVMQ Property {$key} - {$($NIC.NetAdapterVMQ[$Key])}" {
-            $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
-              Get-NetAdapterVMQ -name $USING:NIC.Name -ErrorAction SilentlyContinue 
-            }
+          IT "Verify [host] NIC {$($NIC.Name)} NetAdapterVMQ Property {$key} - {$($NIC.NetAdapterVMQ[$Key])} math [baseline]" {
             $test.$key | Should Be $NIC.NetAdapterVMQ[$Key]
           }                    
         }
       }
       if($NIC.NetAdapterQoS.Enabled) {
         $propertyKeys = $NIC.NetAdapterQoS.Keys
+        $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
+          Get-NetAdapterQoS -name $USING:NIC.Name -ErrorAction SilentlyContinue
+        }
         foreach ($key in $propertyKeys) {
-          IT "Verify [baseline] NIC {$($NIC.Name)} NetAdapterQoS Property {$key} - {$($NIC.NetAdapterQoS[$Key])}" {
-            $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
-              Get-NetAdapterQoS -name $USING:NIC.Name -ErrorAction SilentlyContinue
-            }
+          IT "Verify [host] NIC {$($NIC.Name)} NetAdapterQoS Property {$key} - {$($NIC.NetAdapterQoS[$Key])} math [baseline]" {
             $test.$key | Should Be $NIC.NetAdapterQoS[$Key]
           }                    
         }
       }
       if($NIC.NetAdapterRSS.Enabled) {
         $propertyKeys = $NIC.NetAdapterRSS.Keys
+        $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
+          Get-NetAdapterRSS -name $USING:NIC.Name -ErrorAction SilentlyContinue 
+        }
         foreach ($key in $propertyKeys) {
-          IT "Verify [baseline] NIC {$($NIC.Name)} NetAdapterRSS Property {$key} - {$($NIC.NetAdapterRSS[$Key])}" {
-            $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
-              Get-NetAdapterRSS -name $USING:NIC.Name -ErrorAction SilentlyContinue 
+          IT "Verify [host] NIC {$($NIC.Name)} NetAdapterRSS Property {$key} - {$($NIC.NetAdapterRSS[$Key])} math [baseline]" {
+            if($key -eq 'Profile') { 
+              #This is script property using CIM to enumerate. Need to convert it to string first'
+              $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
+                (Get-NetAdapterRSS -name $USING:NIC.Name -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Profile).ToString()
+              }
+              $test | Should Be $NIC.NetAdapterRSS[$Key]
             }
-            $test.$key | Should Be $NIC.NetAdapterRSS[$Key]
+            else {
+              $test.$key | Should Be $NIC.NetAdapterRSS[$Key]
+            }
           }                    
         }
       }
       if($NIC.NetAdapterRDMA.Enabled) {
         $propertyKeys = $NIC.NetAdapterRDMA.Keys
+        $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
+          Get-NetAdapterRDMA -name $USING:NIC.Name -ErrorAction SilentlyContinue 
+        }
         foreach ($key in $propertyKeys) {
-          IT "Verify [baseline] NIC {$($NIC.Name)} NetAdapterRDMA Property {$key} - {$($NIC.NetAdapterRDMA[$Key])}" {
-            $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
-              Get-NetAdapterRDMA -name $USING:NIC.Name -ErrorAction SilentlyContinue 
-            }
+          IT "Verify [host] NIC {$($NIC.Name)} NetAdapterRDMA Property {$key} - {$($NIC.NetAdapterRDMA[$Key])} math [baseline]" {
             $test.$key | Should Be $NIC.NetAdapterRDMA[$Key]
           }                    
         }
       }
       if($NIC.NetAdapterAdvancedProperty){
+        $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
+          Get-NetAdapterAdvancedProperty -name $USING:NIC.Name -ErrorAction SilentlyContinue
+        }
         foreach ($property in $NIC.NetAdapterAdvancedProperty){
-          IT "Verify [host] NIC {$($NIC.Name)} Advanced Property {$($property.RegistryKeyword)}" {
-            $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
-              Get-NetAdapterAdvancedProperty -name $USING:NIC.Name -RegistryKeyword $USING:property.RegistryKeyword -ErrorAction SilentlyContinue
-            }
-            $property.RegistryValue | Should BeLike $test.RegistryValue
+          IT "Verify [host] NIC {$($NIC.Name)} Advanced Property {$($property.RegistryKeyword)} math [baseline]" {
+            $property.RegistryValue | Should -Be ($test | Where-Object {$PSItem.RegistryKeyword -eq $property.RegistryKeyword}).RegistryValue
           }
         }
       }
@@ -83,7 +117,7 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
   if($POVFConfiguration.RegistryEntry){ 
     Context "Verify Registry Entries" {
       foreach ($rEntry in $POVFConfiguration.RegistryEntry) {
-        it "Verify [host] Registry Entry {$($rEntry.Name)} in {$($rEntry.Path)}" {
+        it "Verify [host] Registry Entry {$($rEntry.Name)} in {$($rEntry.Path)} math [baseline]" {
           $test = Invoke-Command -Session $POVFPSSession -ScriptBlock {
             Get-ItemProperty -Path $USING:rEntry.Path -Name $USING:rEntry.Name -ErrorAction SilentlyContinue
           }
@@ -149,7 +183,7 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
     }
   }
   Context "Verify NetQoS configuration" {
-    it "Verify [baseline] NetQosDCBxSetting configuration - {$($POVFConfiguration.NetQos.NetQosDcbxSetting.Willing)}" {
+    it "Verify [host] NetQosDCBxSetting configuration - {$($POVFConfiguration.NetQos.NetQosDcbxSetting.Willing)} math [baseline]" {
       $hostNetQosDcbxSetting = Invoke-Command -Session $POVFPSSession -ScriptBlock { 
         Get-NetQosDcbxSetting | Select-Object -ExpandProperty Willing
       }
@@ -184,21 +218,6 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
       } 
     }
     if ($POVFConfiguration.NetQos.NetQosTrafficClass){
-      foreach ($cQoSTrafficClass in $POVFConfiguration.NetQos.NetQosTrafficClass) {
-        #Verify if all entries from baseline configuration are deployed to host
-        it "Verify [baseline] entry QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} match [host]" { 
-          $cQoSTrafficClass.Name | Should -BeIn $hostQosTrafficClass.Name
-        }
-        it "Verify [baseline] entry QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} match [host], parameter Priority - {$($cQoSTrafficClass.Priority)}" {
-          $cQoSTrafficClass.Priority | Should Be ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).Priority
-        }
-        it "Verify [baseline] entry QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} match [host], parameter BandwidthPercentage - {$($cQoSTrafficClass.BandwidthPercentage)}" {
-          $cQoSTrafficClass.BandwidthPercentage | Should Be ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).BandwidthPercentage
-        }
-        it "Verify [baseline] entry QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} match [host], parameter Algorithm - {$($cQoSTrafficClass.Algorithm)}" {
-          $cQoSTrafficClass.Algorithm | Should Be ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).Algorithm
-        }
-      }
       foreach ($hQosTrafficClass in ($hostQosTrafficClass| Where-Object {$PSItem.Name -notmatch 'Default'})){
         #verify if all host options are in baseline configuration files. 
         it "Verify [host] entry QoSTrafficClass, name - {$($hQosTrafficClass.Name)} match [baseline]" { 
@@ -212,6 +231,21 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
         }
         it "Verify [host] entry QoSTrafficClass, name - {$($hQosTrafficClass.Algorithm)} match [baseline], parameter Algorithm - {$($hQosTrafficClass.Algorithm)}" {
           $hQosTrafficClass.Algorithm | Should Be ($POVFConfiguration.NetQos.NetQosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Algorithm
+        }
+      }
+      foreach ($cQoSTrafficClass in $POVFConfiguration.NetQos.NetQosTrafficClass) {
+        #Verify if all entries from baseline configuration are deployed to host
+        it "Verify [baseline] entry QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} match [host]" { 
+          $cQoSTrafficClass.Name | Should -BeIn $hostQosTrafficClass.Name
+        }
+        it "Verify [baseline] entry QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} match [host], parameter Priority - {$($cQoSTrafficClass.Priority)}" {
+          $cQoSTrafficClass.Priority | Should Be ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).Priority
+        }
+        it "Verify [baseline] entry QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} match [host], parameter BandwidthPercentage - {$($cQoSTrafficClass.BandwidthPercentage)}" {
+          $cQoSTrafficClass.BandwidthPercentage | Should Be ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).BandwidthPercentage
+        }
+        it "Verify [baseline] entry QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} match [host], parameter Algorithm - {$($cQoSTrafficClass.Algorithm)}" {
+          $cQoSTrafficClass.Algorithm | Should Be ($hostQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).Algorithm
         }
       }
     }
@@ -294,28 +328,30 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
           it "Verify [host] VMNetworkAdapter {$($vSwitchVMNetworkAdapter.Name)} Minimum Bandwidth Weight - {$($vSwitchVMNetworkAdapter.MinimumBandwidthWeight)} match [baseline]" {
             ($hostVMNetworkAdapters.Where({$PSItem.Name -eq $vSwitchVMNetworkAdapter.Name})).BandwidthPercentage | Should Be $vSwitchVMNetworkAdapter.MinimumBandwidthWeight
           }
-          $netAdapterIPConfiguration = Invoke-Command $POVFPSSession -ScriptBlock {
-            Get-NetIPConfiguration | Where-Object {$PSItem.InterfaceAlias -match $USING:vSwitchVMNetworkAdapter.Name} 
-          }
-          it "Verify [host] VMNetworkAdapter {$($vSwitchVMNetworkAdapter.Name)} IP Configuration: IPAddress match [baseline]" {
-            $netAdapterIPConfiguration.IPv4Address.IPAddress | Should Be $vSwitchVMNetworkAdapter.IPConfiguration.IPAddress
-          }
-          it "Verify [host] VMNetworkAdapter {$($vSwitchVMNetworkAdapter.Name)} IP Configuration: DefaultGateway match [baseline]" {
-            $netAdapterIPConfiguration.IPv4DefaultGateway.NextHop | Should Be $vSwitchVMNetworkAdapter.IPConfiguration.DefaultGateway
-          }
-          it "Verify [host] VMNetworkAdapter {$($vSwitchVMNetworkAdapter.Name)} IP Configuration: Prefix match [baseline]" {
-            $netAdapterIPConfiguration.IPv4Address.PrefixLength | Should Be $vSwitchVMNetworkAdapter.IPConfiguration.PrefixLength
-          }
-          it "Verify [host] VMNetworkAdapter {$($vSwitchVMNetworkAdapter.Name)} IP Configuration: DNSClientServerAddress match [baseline]" {
-            $DNSServers = if(($netAdapterIPConfiguration.DNSServer | Where-Object {$PSItem.AddressFamily -eq '2'}).ServerAddresses) {
-              #For IPV4 configuration Get-NetIPConfiguration returns AddressFamily -eq 2
-              ($netAdapterIPConfiguration.DNSServer | Where-Object {$PSItem.AddressFamily -eq '2'} | 
-              Select-Object -ExpandProperty ServerAddresses).Split(',')
+          if($null -ne $vSwitchVMNetworkAdapter.IPConfiguration.IPAddress) {
+            $netAdapterIPConfiguration = Invoke-Command $POVFPSSession -ScriptBlock {
+              Get-NetIPConfiguration | Where-Object {$PSItem.InterfaceAlias -match $USING:vSwitchVMNetworkAdapter.Name} 
             }
-            else {
-              $DNSServers = $null
+            it "Verify [host] VMNetworkAdapter {$($vSwitchVMNetworkAdapter.Name)} IP Configuration: IPAddress match [baseline]" {
+              $netAdapterIPConfiguration.IPv4Address.IPAddress | Should Be $vSwitchVMNetworkAdapter.IPConfiguration.IPAddress
             }
-            $DNSServers | Should -BeIn $vSwitchVMNetworkAdapter.IPConfiguration.DNSClientServerAddress
+            it "Verify [host] VMNetworkAdapter {$($vSwitchVMNetworkAdapter.Name)} IP Configuration: DefaultGateway match [baseline]" {
+              $netAdapterIPConfiguration.IPv4DefaultGateway.NextHop | Should Be $vSwitchVMNetworkAdapter.IPConfiguration.DefaultGateway
+            }
+            it "Verify [host] VMNetworkAdapter {$($vSwitchVMNetworkAdapter.Name)} IP Configuration: Prefix match [baseline]" {
+              $netAdapterIPConfiguration.IPv4Address.PrefixLength | Should Be $vSwitchVMNetworkAdapter.IPConfiguration.PrefixLength
+            }
+            it "Verify [host] VMNetworkAdapter {$($vSwitchVMNetworkAdapter.Name)} IP Configuration: DNSClientServerAddress match [baseline]" {
+              $DNSServers = if(($netAdapterIPConfiguration.DNSServer | Where-Object {$PSItem.AddressFamily -eq '2'}).ServerAddresses) {
+                #For IPV4 configuration Get-NetIPConfiguration returns AddressFamily -eq 2 for IPv4
+                ($netAdapterIPConfiguration.DNSServer | Where-Object {$PSItem.AddressFamily -eq '2'} | 
+                Select-Object -ExpandProperty ServerAddresses).Split(',')
+              }
+              else {
+                $DNSServers = $null
+              }
+              $DNSServers | Should -BeIn $vSwitchVMNetworkAdapter.IPConfiguration.DNSClientServerAddress
+            }
           }
         }
       }
@@ -330,14 +366,14 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
       }
       foreach($presentRole in $POVFConfiguration.Roles.Present.Name) {
         $presentRole
-        it "Verify [host] role {$presentRole} is installed" {
+        it "Verify [basline] role {$presentRole} is installed in [host]" {
           $testRole = $hostRoles | Where-Object {$PSItem.Name -eq $presentRole}
           $testRole.Installed |Should -Be $true
         }
       }
       if($POVFConfiguration.Roles.Absent) { 
         foreach($absentRole in $POVFConfiguration.Roles.Absent.Name) {
-          it "Verify [host] role {$($absentRole.Name)} is installed" {
+          it "Verify [baseline] role {$($absentRole.Name)} is absent in [host]" {
             $testRole = $hostRoles | Where-Object {$PSItem.Name -eq $absentRole.Name}
             $testRole.Installed | Should -Be $false
           }
