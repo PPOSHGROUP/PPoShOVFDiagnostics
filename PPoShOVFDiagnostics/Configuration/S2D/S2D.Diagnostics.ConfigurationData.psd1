@@ -18,12 +18,6 @@
       DiagnosticFile = "S2D.Comprehensive.Nodes.Configuration.Tests.ps1"
       Parameters = @('POVFConfiguration','POVFCredential')
       Configuration = 'AllNodes'
-      Tag =@('Configuration')
-    },
-    @{
-      DiagnosticFile = "S2D.Comprehensive.Nodes.Configuration.Tests.ps1"
-      Parameters = @('POVFConfiguration','POVFCredential')
-      Configuration = 'AllNodes'
       Tag =@('Configuration','Basic','Registry','NetQoS','Teaming','VMSwitch','Roles','Hyper-V')
     }
   )

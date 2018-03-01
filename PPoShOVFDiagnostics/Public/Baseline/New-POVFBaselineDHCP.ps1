@@ -1,4 +1,23 @@
-function New-POVFDHCPConfigurationBaseline {
+function New-POVFBaselineDHCP {
+    <#
+    .SYNOPSIS
+    Short description
+    
+    .DESCRIPTION
+    Long description
+    
+    .PARAMETER POVFConfigurationFolder
+    Parameter description
+    
+    .PARAMETER Credential
+    Parameter description
+    
+    .EXAMPLE
+    An example
+    
+    .NOTES
+    General notes
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,HelpMessage='Folder for baseline Configuration folder structure',

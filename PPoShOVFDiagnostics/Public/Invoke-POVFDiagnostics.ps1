@@ -61,8 +61,19 @@ function Invoke-POVFDiagnostics {
     $TestType = @('Simple','Comprehensive'),
 
     [Parameter(Mandatory=$false,HelpMessage='Tag for Pester')]
+    [ValidateNotNullOrEmpty()]
     [string[]]
-    $Tag
+    $Tag,
+
+    [Parameter(Mandatory=$false,HelpMessage='Node to test')]
+    [ValidateNotNullOrEmpty()]
+    [string[]]
+    $NodeName,
+
+    [Parameter(Mandatory=$false,HelpMessage='Configuration Name for PSSession (JEA)')]
+    [ValidateNotNullOrEmpty()]
+    [string]
+    $PSSessionConfName
     
     #$JEAEndpoint
   )
@@ -140,7 +151,11 @@ function Invoke-POVFDiagnostics {
             POVFConfiguration = $paramPOVFConfiguration.Configuration.NonNodeData
             POVFCredential = $Credential
           }
+          if($PSBoundParameters.ContainsKey('PSSessionConfName')){
+            $pOVFTestParams.POVFTestFileParameters.PSSessionConfName = $PSSessionConfName
+          }
           if($pOVFTestParams.OutputFolder){
+            #Create fileName string
             $timestamp = Get-Date -Format 'yyyyMMdd_HHmm'
             $fileNameTemp = (split-Path $testParams.DiagnosticFile -Leaf).replace('.ps1','')
             if($PSBoundParameters.ContainsKey('ReportFilePrefix')){
@@ -154,20 +169,32 @@ function Invoke-POVFDiagnostics {
 
         }
         #iterate through AllNodes - each node configuration 
-        elseif($testParams.Configuration -eq 'AllNodes'){ 
-          foreach ($node in $paramPOVFConfiguration.Configuration.AllNodes) {
+        elseif($testParams.Configuration -eq 'AllNodes'){
+          if($PSBoundParameters.ContainsKey('NodeName')){
+            $NodesToProcess = foreach ($nodeToCheck in $NodeName){
+              $paramPOVFConfiguration.Configuration.Allnodes | Where-Object {$PSItem.ComputerName -eq $nodeToCheck}
+            }
+          }
+          else{
+            $NodesToProcess = $paramPOVFConfiguration.Configuration.Allnodes
+          }
+          foreach ($node in $NodesToProcess) {
             $pOVFTestParams.POVFTestFileParameters =@{ 
               POVFConfiguration = $node
               POVFCredential = $Credential
             }
+            if($PSBoundParameters.ContainsKey('PSSessionConfName')){
+              $pOVFTestParams.POVFTestFileParameters.PSSessionConfName = $PSSessionConfName
+            }
 
             if($pOVFTestParams.OutputFolder){
+              #Create fileName string
               $timestamp = Get-Date -Format 'yyyyMMdd_HHmm'
               $fileNameTemp = (split-Path $testParams.DiagnosticFile -Leaf).replace('.ps1','')
               if($PSBoundParameters.ContainsKey('ReportFilePrefix')){
-                $outputFileName = "{0}_{1}_{2}_{3}_PesterResults.xml" -f $ReportFilePrefix, $node.ComputerName, $timestamp, $fileNameTemp 
+                $outputFileName = "{0}_{1}_{2}_{3}_PesterResults.xml" -f $ReportFilePrefix,  $timestamp, $node.ComputerName, $fileNameTemp 
               }
-              $outputFileName = "{0}_{1}_{2}_PesterResults.xml" -f $node.ComputerName,$timestamp, $fileNameTemp 
+              $outputFileName = "{0}_{1}_{2}_PesterResults.xml" -f $timestamp, $node.ComputerName, $fileNameTemp 
               $pOVFTestParams.OutputFile = $outputFileName
             }
              #Invoke Pester tests    

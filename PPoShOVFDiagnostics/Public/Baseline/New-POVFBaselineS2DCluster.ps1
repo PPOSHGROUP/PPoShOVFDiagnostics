@@ -1,4 +1,4 @@
-function Get-POVFS2DClusterBaseline {
+function New-POVFBaselineS2DCluster {
     [CmdletBinding()]
   param(
       

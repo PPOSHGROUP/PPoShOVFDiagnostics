@@ -1,4 +1,26 @@
-function Get-POVFADBaseline {
+function New-POVFBaselineAD {
+  <#
+  .SYNOPSIS
+  Short description
+  
+  .DESCRIPTION
+  Long description
+  
+  .PARAMETER ComputerName
+  Parameter description
+  
+  .PARAMETER Credential
+  Parameter description
+  
+  .PARAMETER POVFADBaselineFile
+  Parameter description
+  
+  .EXAMPLE
+  An example
+  
+  .NOTES
+  General notes
+  #>
   [CmdletBinding()]
   param(
     [Parameter(Mandatory=$true)]
