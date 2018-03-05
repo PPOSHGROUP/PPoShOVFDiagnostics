@@ -2,69 +2,69 @@ param (
   $POVFConfiguration,
   [System.Management.Automation.PSCredential]$POVFCredential
 )
-$POVFPSSession = New-PSSessionCustom -ComputerName $POVFConfiguration.ComputerName -Credential $POVFCredential -SessionName 'POVF'
-Describe "Verifying Cluster {$($POVFConfiguration.ClusterName)} Operational Status" -Tag 'Operational' {
-  Context "Verifying Core Cluster Resources"{
+$POVFPSSession = New-PSSessionCustom -ComputerName $POVFConfiguration.ClusterName -Credential $POVFCredential -SessionName 'POVF'
+Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Operational Status" -Tag 'Operational' {
+  Context "Verify [host] Core Cluster Resources"{
     $coreClusterResources = Invoke-Command -Session $POVFPSSession -ScriptBlock {
       Get-ClusterResource | Where-Object {$PSItem.OwnerGroup -eq 'Cluster Group'} | Select-Object -Property Name,State,OwnerGroup,ResourceType
     }
     if($coreClusterResources){
       foreach($ccResource in $coreClusterResources){
-        IT "Verifying resource {$($ccResource.Name)} state is {Online}" {
+        IT "Verify [host] resource {$($ccResource.Name)} state is [Online]" {
           $ccResource.State.Value | Should Be 'Online'
         }
       }
     }
   }
-  Context "Verifying Cluster Core Network Resources" {
+  Context "Verify [host] Cluster Core Network Resources" {
     $coreNetworkResources = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-ClusterNetwork }
     if($coreNetworkResources){
       foreach($cnResource in $coreNetworkResources){ 
-        IT "Verifying network resource {$($cnResource.Name)} state is {UP}"{
+        IT "Verify [host] network resource {$($cnResource.Name)} state is [UP]"{
           $cnResource.State | Should Be 'Up'
         }
       }
     }
   }  
-  Context "Verifying Cluster Network Interfaces" {
+  Context "Verify [host] Cluster Network Interfaces" {
     $networkInterfaces = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-ClusterNetworkInterface }
     if($networkInterfaces) {
       foreach ($nInterface in $networkInterfaces){
-        IT "Verifying network interface {$($nInterface.Name)} from Node {$($nInterface.Node)} State is {Up}" {
+        IT "Verify [host] network interface {$($nInterface.Name)} from Node {$($nInterface.Node)} State is [Up]" {
           $nInterface.State | Should Be 'Up'
         }
       }
     }
   }
 }
-Describe "Verifying Cluster {$($POVFConfiguration.ClusterName)} Nodes Operational Status" -Tag 'Operational' {
-  Context "Verifying Nodes are Online" {
+Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Nodes Operational Status" -Tag 'Operational' {
+  Context "Verify [host] Nodes are Online" {
     $clusterNodes = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-ClusterNode }
     foreach($cNode in $clusterNodes){
-      IT "Veryfing node {$($cNode.Name)} Status" { 
+      IT "Verify node {$($cNode.Name)} Status" { 
         $cNode.State | Should Be 'Up'
       }
     }
   }
 }
-Describe "Verifying Cluster {$($POVFConfiguration.ClusterName)} Storage" -Tag 'Operational' {
-  Context "Verifying Cluster Shared Volumes State" {
+Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Storage" -Tag 'Operational' {Verify [host]
+  Context "Verify [host] Cluster Shared Volumes State" {
     $clusterSharedVolumes = Invoke-Command -Session $POVFPSSession -ScriptBlock {Get-ClusterSharedVolume}
     if($clusterSharedVolumes) {
       foreach ($csVolume in $clusterSharedVolumes){
-        IT "Verifying Volume {$($csVolume.Name)} State is {Online}" {
+        IT "Verify [host] Volume {$($csVolume.Name)} State is {Online}" {
           $csVolume.State | Should Be 'Online'
         }
-        IT "Verifying Volume {$($csVolume.Name)} is on parent Node" {
+        IT "Verify [host] Volume {$($csVolume.Name)} is on parent Node" {
           $csVolume.Name | Should match $csVolume.OwnerNode
 
         }
       }
     }
   }
-  Context "Verifying Storage Job Status" {
+  Context "Verify [host] Storage Job Status" {
     $storageJobs = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-StorageJob }
-    IT "There should be no storageJobs running" {
+    IT "Verify [host] storage Jobs runnin - should be none" {
       $storageJobs | Should Be $null
     }
   }
