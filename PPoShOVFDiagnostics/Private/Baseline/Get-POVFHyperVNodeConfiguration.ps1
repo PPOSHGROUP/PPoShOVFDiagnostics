@@ -1,4 +1,4 @@
-function Get-POVFBaselineHyperVSingleNode {
+function Get-POVFHyperVNodeConfiguration {
   [CmdletBinding()]
   param(
     [Parameter(Mandatory,
@@ -68,8 +68,5 @@ function Get-POVFBaselineHyperVSingleNode {
     if(-not ($PSBoundParameters.ContainsKey('PSSession'))){
       Get-PSSession $POVFPSSession.Name -ErrorAction SilentlyContinue| Remove-PSSession -ErrorAction SilentlyContinue  
     }
-  }
-  end{
-    #Get-PSSession -Name $POVFPSSession.Name | Remove-PSSession -ErrorAction SilentlyContinue 
   }
 }

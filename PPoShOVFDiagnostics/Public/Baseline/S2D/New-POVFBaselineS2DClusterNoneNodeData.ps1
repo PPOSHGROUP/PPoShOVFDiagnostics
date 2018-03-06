@@ -5,7 +5,16 @@ function New-POVFBaselineS2DCluster {
       [Parameter(Mandatory)]
       [ValidateNotNullOrEmpty()]
       [System.String[]]
-      $Cluster
+      $Cluster,
+
+      [Parameter(Mandatory=$false)]
+      [System.Management.Automation.PSCredential]
+      $Credential,
+
+      [Parameter(Mandatory=$true)]
+      [System.String]
+      [ValidateScript({Test-Path -Path $PSItem -IsValid})]
+      $POVFADBaselineFile
   
     )
     begin{

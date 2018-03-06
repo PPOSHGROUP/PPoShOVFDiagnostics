@@ -10,7 +10,7 @@ Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Operational 
     }
     if($coreClusterResources){
       foreach($ccResource in $coreClusterResources){
-        IT "Verify [host] resource {$($ccResource.Name)} state is [Online]" {
+        IT "Verify [host] resource {$($ccResource.Name)} state is - [Online]" {
           $ccResource.State.Value | Should Be 'Online'
         }
       }
@@ -20,7 +20,7 @@ Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Operational 
     $coreNetworkResources = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-ClusterNetwork }
     if($coreNetworkResources){
       foreach($cnResource in $coreNetworkResources){ 
-        IT "Verify [host] network resource {$($cnResource.Name)} state is [UP]"{
+        IT "Verify [host] network resource {$($cnResource.Name)} state is - [UP]"{
           $cnResource.State | Should Be 'Up'
         }
       }
@@ -30,7 +30,7 @@ Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Operational 
     $networkInterfaces = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-ClusterNetworkInterface }
     if($networkInterfaces) {
       foreach ($nInterface in $networkInterfaces){
-        IT "Verify [host] network interface {$($nInterface.Name)} from Node {$($nInterface.Node)} State is [Up]" {
+        IT "Verify [host] network interface {$($nInterface.Name)} from Node {$($nInterface.Node)} State is - [Up]" {
           $nInterface.State | Should Be 'Up'
         }
       }
@@ -41,32 +41,72 @@ Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Nodes Operat
   Context "Verify [host] Nodes are Online" {
     $clusterNodes = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-ClusterNode }
     foreach($cNode in $clusterNodes){
-      IT "Verify node {$($cNode.Name)} Status" { 
-        $cNode.State | Should Be 'Up'
+      IT "Verify [host] node {$($cNode.Name)} State is - [Up]" { 
+        $cNode.State | Should -Be 'Up'
+      }
+      it "Verify [host] node {$($cNode.Name)} Drain Status - [NotInitiated]" {
+        $cnode.DrainStatus | Should -Be 'NotInitiated'
       }
     }
   }
 }
-Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Storage" -Tag 'Operational' {Verify [host]
+Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Storage" -Tag 'Operational' {
   Context "Verify [host] Cluster Shared Volumes State" {
-    $clusterSharedVolumes = Invoke-Command -Session $POVFPSSession -ScriptBlock {Get-ClusterSharedVolume}
+    $clusterSharedVolumes += Invoke-Command -Session $POVFPSSession -ScriptBlock {
+      Get-ClusterSharedVolume | foreach-object {
+        @{
+            Name = $PSItem.Name
+            State = $PSItem.State.ToString()
+            SharedVolumeInfoFaultState = $PSItem.SharedVolumeInfo.FaultState.ToString()
+            SharedVolumeInfoMaintenanceMode = $PSItem.SharedVolumeInfo.MaintenanceMode
+            SharedVolumeInfoRedirectedAccess = $PSItem.SharedVolumeInfo.RedirectedAccess
+        }
+      }
+    }
     if($clusterSharedVolumes) {
       foreach ($csVolume in $clusterSharedVolumes){
-        IT "Verify [host] Volume {$($csVolume.Name)} State is {Online}" {
-          $csVolume.State | Should Be 'Online'
+        IT "Verify [host] Volume {$($csVolume.Name)} State is [Online]" {
+          $csVolume.State | Should -Be 'Online'
         }
-        IT "Verify [host] Volume {$($csVolume.Name)} is on parent Node" {
+        IT "Verify [host] Volume {$($csVolume.Name)} is not in [Fault State]" {
+          $csVolume.SharedVolumeInfoFaultState | Should -Be 'NoFaults'
+        }
+        IT "Verify [host] Volume {$($csVolume.Name)} is not in [maintenance mode]" {
+          $csVolume.SharedVolumeInfoMaintenanceMode | Should -Be $false
+        }
+        IT "Verify [host] Volume {$($csVolume.Name)} is not in [redirected access]" {
+          $csVolume.SharedVolumeInfoRedirectedAccess | Should -Be $false
+        }
+        IT "Verify [host] Volume {$($csVolume.Name)} is on [parent Node]" {
           $csVolume.Name | Should match $csVolume.OwnerNode
-
         }
+      }
+    }
+  }
+  Context "Verify [host] Cluster Volume Status" {
+    $clusterVolumes = Invoke-Command -Session $POVFPSSession -ScriptBlock {
+      Get-Volume | Where-Object { $PSitem.FileSystem -eq 'CSVFS'} | foreach-object {
+        @{
+          Name = $PSItem.FileSystemLabel
+          OperationalStatus = $PSItem.OperationalStatus.ToString()
+          HealthStatus = $PSItem.HealthStatus.ToString()
+        }
+      }
+    }
+    foreach ($cVolume in $clusterVolumes){
+      IT "Verify [host] Cluster Volume {$($cVolume.Name)} Operational Status - [OK]" {
+        $cVolume.OperationalStatus | Should -Be 'OK'
+      }
+      IT "Verify [host] Cluster Volume {$($cVolume.Name)} Healt Status - [Healthy]" {
+        $cVolume.HealthStatus | Should -Be 'Healthy'
       }
     }
   }
   Context "Verify [host] Storage Job Status" {
     $storageJobs = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-StorageJob }
-    IT "Verify [host] storage Jobs runnin - should be none" {
+    IT "Verify [host] storage Jobs running - [None]" {
       $storageJobs | Should Be $null
     }
   }
 }
-Get-PSSession -Name 'POVF*' | Remove-PSSession -ErrorAction SilentlyContinue 
+Remove-PSSession $POVFPSSession.Name -ErrorAction SilentlyContinue  
