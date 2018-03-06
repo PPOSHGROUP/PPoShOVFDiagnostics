@@ -65,29 +65,35 @@ function Get-POVFNetIPConfiguration {
       Get-NetAdapter @USING:interfaceParams -ErrorAction SilentlyContinue
     }
     if($netAdapters) {
-      foreach ($interface in $netAdapters){
-        $netIPConfiguration = Invoke-Command -session $POVFPSSession -ScriptBlock { 
-          Get-NetIPConfiguration -InterfaceAlias $USING:interface.Name -ErrorAction SilentlyContinue
+      foreach ($interface in $netAdapters.Name){
+        #NetIPConfiguration is using Get-NetIPInterface underneath and not respecting -ErrorAction SilentlyContinue. Need to check first
+        $NetIPInterface = Invoke-Command -session $POVFPSSession -ScriptBlock { 
+          Get-NetIPInterface -InterfaceAlias $USING:interface -ErrorAction SilentlyContinue
         }
-        if($netIPConfiguration) { 
-          $DNSServers = @( if(($netIPConfiguration.DNSServer | Where-Object {$PSItem.AddressFamily -eq '2'}).ServerAddresses){
-              ($netIPConfiguration.DNSServer | Where-Object {$PSItem.AddressFamily -eq '2'} | 
-              Select-Object -ExpandProperty ServerAddresses).Split(',')
-          } )
-          $interfaceIPConfiguration = [ordered]@{
-            IPAddress = $netIPConfiguration.IPv4Address.IPAddress
-            PrefixLength = $netIPConfiguration.IPv4Address.PrefixLength
-            DefaultGateway=$netIPConfiguration.IPv4DefaultGateway.NextHop
-            DNSClientServerAddress = $null
-            DHCP = 'Disabled'
+        if($NetIPInterface) { 
+          $netIPConfiguration = Invoke-Command -session $POVFPSSession -ScriptBlock { 
+            Get-NetIPConfiguration -InterfaceAlias $USING:interface -ErrorAction SilentlyContinue
           }
-          if ($DNSServers) {
-            $interfaceIPConfiguration.DNSClientServerAddress = $DNSServers
-          }          
-          if ($netIPInterface.dhcp -eq 'Enabled') {
-            $interfaceIPConfiguration.DHCP = $true
+          if($netIPConfiguration) { 
+            $DNSServers = @( if(($netIPConfiguration.DNSServer | Where-Object {$PSItem.AddressFamily -eq '2'}).ServerAddresses){
+                ($netIPConfiguration.DNSServer | Where-Object {$PSItem.AddressFamily -eq '2'} | 
+                Select-Object -ExpandProperty ServerAddresses).Split(',')
+            } )
+            $interfaceIPConfiguration = [ordered]@{
+              IPAddress = $netIPConfiguration.IPv4Address.IPAddress
+              PrefixLength = $netIPConfiguration.IPv4Address.PrefixLength
+              DefaultGateway=$netIPConfiguration.IPv4DefaultGateway.NextHop
+              DNSClientServerAddress = $null
+              DHCP = 'Disabled'
+            }
+            if ($DNSServers) {
+              $interfaceIPConfiguration.DNSClientServerAddress = $DNSServers
+            }          
+            if ($netIPInterface.dhcp -eq 'Enabled') {
+              $interfaceIPConfiguration.DHCP = $true
+            }
+            $interfaceIPConfiguration
           }
-          $interfaceIPConfiguration
         }
       }
     }
