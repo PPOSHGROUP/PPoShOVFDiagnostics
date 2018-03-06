@@ -5,7 +5,7 @@ function New-POVFBaselineS2DCluster {
       [Parameter(Mandatory)]
       [ValidateNotNullOrEmpty()]
       [System.String[]]
-      $ComputerName
+      $Cluster
   
     )
     begin{

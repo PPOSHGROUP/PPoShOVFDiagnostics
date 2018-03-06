@@ -65,6 +65,7 @@ function Get-POVFVMSwitchConfiguration {
             $vmNetworkAdapterResult = [ordered]@{
               Name = $vmNetworkAdapter.Name
               VLANID = $null
+              OperationMode = $null
               DhcpGuard = $vmNetworkAdapter.DhcpGuard
               RouterGuard = $vmNetworkAdapter.RouterGuard
               ExtendedAclList = $vmNetworkAdapter.ExtendedAclList
@@ -75,7 +76,8 @@ function Get-POVFVMSwitchConfiguration {
               Get-VMNetworkAdapterVlan -VMNetworkAdapterName $USING:vmNetworkAdapter.Name -ManagementOS:$USING:vSwitchResult.AllowManagementOS
             }
             if($vlanid){ 
-              $vmNetworkAdapterResult.VLANID = $vlanid
+              $vmNetworkAdapterResult.VLANID = $vlanid.AccessVlanId
+              $vmNetworkAdapterResult.OperationMode = $vlanid.OperationMode
             }
             $vmNetworkAdapterResult.IPConfiguration = Get-POVFNetIPConfiguration -PSSession $POVFPSSession -InterfaceAlias "*$($vmNetworkAdapter.Name)*"
             $vmNetworkAdapterResult
