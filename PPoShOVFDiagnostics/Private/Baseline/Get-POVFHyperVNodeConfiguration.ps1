@@ -46,9 +46,10 @@ function Get-POVFHyperVNodeConfiguration {
         ClusterName = $null
         Domain = $null
         NIC = @()
+        NetQoS = @()
         Registry= @()
         Team = @()
-        VmSwitch=@()
+        VmSwitch= @()
         Roles = @{}
         HyperVConfiguration = @{}
       }

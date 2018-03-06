@@ -46,7 +46,7 @@ function Get-POVFHyperVConfiguration {
 
     #endregion
     $hostProperties = Invoke-Command -session $POVFPSSession -scriptBlock {
-      Get-VMHost | Select-Object *
+      Get-VMHost 
     }
     @{
       VirtualHardDiskPath = $hostProperties.VirtualHardDiskPath

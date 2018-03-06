@@ -74,7 +74,7 @@ function Get-POVFS2DClusterNoneNodeDataConfiguration {
       $sharedVolumes += Get-ClusterSharedVolume | ForEach-Object {
         @{ 
           Name = $PSItem.Name
-          Path = $PSItem.SharedVolumeInfo.ToString()
+          Path = $PSItem.SharedVolumeInfo.FriendlyVolumeName
         }
       }
       @{ 

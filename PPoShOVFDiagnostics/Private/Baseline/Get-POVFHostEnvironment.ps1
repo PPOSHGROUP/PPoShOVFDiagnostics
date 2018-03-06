@@ -59,7 +59,7 @@ function Get-POVFHostEnvironment {
       Domain = $hostProperties.Domain
     }
     if($cluster){
-      $result.Cluster = $cluster
+      $result.Cluster = $cluster.Name
     }
     $result
     
