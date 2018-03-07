@@ -60,11 +60,13 @@ Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Storage" -Ta
             SharedVolumeInfoFaultState = $PSItem.SharedVolumeInfo.FaultState.ToString()
             SharedVolumeInfoMaintenanceMode = $PSItem.SharedVolumeInfo.MaintenanceMode
             SharedVolumeInfoRedirectedAccess = $PSItem.SharedVolumeInfo.RedirectedAccess
+            OwnerNode = $PSItem.OwnerNode.Name
         }
       }
     }
     if($clusterSharedVolumes) {
       foreach ($csVolume in $clusterSharedVolumes){
+        $csVolume
         IT "Verify [host] Volume {$($csVolume.Name)} State is [Online]" {
           $csVolume.State | Should -Be 'Online'
         }
@@ -78,7 +80,7 @@ Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Storage" -Ta
           $csVolume.SharedVolumeInfoRedirectedAccess | Should -Be $false
         }
         IT "Verify [host] Volume {$($csVolume.Name)} is on [parent Node]" {
-          $csVolume.Name | Should match $csVolume.OwnerNode
+          $csVolume.Name  | Should match $csVolume.OwnerNode 
         }
       }
     }
