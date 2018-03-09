@@ -53,16 +53,32 @@ function Get-POVFHyperVNodeConfiguration {
         Roles = @{}
         HyperVConfiguration = @{}
       }
+      Write-Log -Info -Message "Reading configuration from host {$($POVFPSSession.ComputerName)}"
+      Write-Progress -Activity 'Gathering HyperV Node configuration' -Status "Get Host {$($POVFPSSession.ComputerName)} Environment configuration" -PercentComplete 0
       $hostEnvironment = Get-POVFHostEnvironment -PSSession $POVFPSSession
       $NodeConfiguration.ComputerName = $hostEnvironment.ComputerName
       $NodeConfiguration.ClusterName = $hostEnvironment.Cluster
       $NodeConfiguration.Domain = $hostEnvironment.Domain
+      
+      Write-Progress -Activity 'Gathering HyperV Node configuration' -Status "Get Host {$($POVFPSSession.ComputerName)} Network Adapter configuration" -PercentComplete 10
       $NodeConfiguration.NIC += Get-POVFNetAdapterConfiguration -Physical -PSSession $POVFPSSession
+
+      Write-Progress -Activity 'Gathering HyperV Node configuration' -Status "Get Host {$($POVFPSSession.ComputerName)} QoS configuration" -PercentComplete 40
       $NodeConfiguration.NetQoS += Get-POVFNetQoSConfiguration -PSSession $POVFPSSession
+      
+      Write-Progress -Activity 'Gathering HyperV Node configuration' -Status "Get Host {$($POVFPSSession.ComputerName)} Registry configuration" -PercentComplete 50
       $NodeConfiguration.Registry += Get-POVFRegistryConfiguration  -PSSession $POVFPSSession
+      
+      Write-Progress -Activity 'Gathering HyperV Node configuration' -Status "Get Host {$($POVFPSSession.ComputerName)} Teaming configuration" -PercentComplete 60
       $NodeConfiguration.Team += Get-POVFTeamingConfiguration -PSSession $POVFPSSession
+      
+      Write-Progress -Activity 'Gathering HyperV Node configuration' -Status "Get Host {$($POVFPSSession.ComputerName)} VMSwitch configuration" -PercentComplete 70
       $NodeConfiguration.VmSwitch += Get-POVFVMSwitchConfiguration -PSSession $POVFPSSession
+      
+      Write-Progress -Activity 'Gathering HyperV Node configuration' -Status "Get Host {$($POVFPSSession.ComputerName)} Roles configuration" -PercentComplete 80
       $NodeConfiguration.Roles += Get-POVFRolesConfiguration -PSSession $POVFPSSession
+
+      Write-Progress -Activity 'Gathering HyperV Node configuration' -Status "Get Host {$($POVFPSSession.ComputerName)} HyperV configuration" -PercentComplete 90
       $NodeConfiguration.HyperVConfiguration = Get-POVFHyperVConfiguration -PSSession $POVFPSSession
       $NodeConfiguration
     }
