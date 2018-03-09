@@ -87,44 +87,45 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
   }
 }
 Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($POVFConfiguration.ClusterName)} NetQos Configuration Status" -Tags @('Configuration','NetQoS') {
+  $hostNetQoSConfiguration = Get-POVFNetQoSConfiguration -PSSession $POVFPSSession
   Context "Verify NetQos Policies Configuration" { 
-    $hostNetQoSConfiguration = Get-POVFNetQoSConfiguration -PSSession $POVFPSSession
+    $hostNetQoSPolicies = $hostNetQoSConfiguration.NetQosPolicies
     if ($POVFConfiguration.NetQos.NetQosPolicies){ 
       #Verify if all entries from configuration are deployed to host
       foreach ($cQoSPolicy in $POVFConfiguration.NetQos.NetQosPolicies) {
         it "Verify [baseline] entry for QoS Policy, name - {$($cQoSPolicy.Name)} match [host]" { 
-          $cQoSPolicy.Name | Should -BeIn $hostNetQoSConfiguration.NetQosPolicies.Name
+          $cQoSPolicy.Name | Should -BeIn $hostNetQoSPolicies.Name
         }
         it "Verify [baseline] entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter Priority - {$($cQoSPolicy.PriorityValue8021Action)} match [host]" {
-          $cQoSPolicy.PriorityValue8021Action | Should Be ($hostNetQoSConfiguration.NetQosPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).PriorityValue8021Action
+          $cQoSPolicy.PriorityValue8021Action | Should -Be ($hostNetQoSPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).PriorityValue8021Action
         }
         if($null -ne $cQoSPolicy.NetDirectPortMatchCondition) { 
           it "Verify [baseline] entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter Priority - {$($cQoSPolicy.NetDirectPortMatchCondition)} match [host]" {
-            $cQoSPolicy.NetDirectPortMatchCondition | Should Be ($hostNetQoSConfiguration.NetQosPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).NetDirectPortMatchCondition
+            $cQoSPolicy.NetDirectPortMatchCondition | Should -Be ($hostNetQoSPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).NetDirectPortMatchCondition
           }
         }
         if($null -ne $cQoSPolicy.IPProtocolMatchCondition){ 
           it "Verify [baseline] entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter Priority - {$($cQoSPolicy.IPProtocolMatchCondition)} match [host]" {
-            $cQoSPolicy.IPProtocolMatchCondition | Should Be ($hostNetQoSConfiguration.NetQosPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).IPProtocolMatchCondition
+            $cQoSPolicy.IPProtocolMatchCondition | Should -Be ($hostNetQoSPolicies | Where-Object {$PSItem.Name -eq $cQoSPolicy.Name}).IPProtocolMatchCondition
           }
         }
       }
       #Verify all entries from host are in configuration
-      foreach ($hQosPolicy in $hostNetQoSConfiguration.NetQosPolicies){
+      foreach ($hQosPolicy in $hostNetQoSPolicies){
         it "Verify [host] entry for QoS Policy, name - {$($hQosPolicy.Name)} match [baseline]" { 
           $hQosPolicy.Name | Should -BeIn $POVFConfiguration.NetQos.NetQosPolicies.Name
         }
         it "Verify [host] entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter Priority - {$($cQoSPolicy.PriorityValue8021Action)} match [baseline]" {
-          $hQosPolicy.PriorityValue8021Action | Should Be ($POVFConfiguration.NetQos.NetQosPolicies | Where-Object {$PSItem.Name -eq $hQosPolicy.Name}).PriorityValue8021Action
+          $hQosPolicy.PriorityValue8021Action | Should -Be ($POVFConfiguration.NetQos.NetQosPolicies | Where-Object {$PSItem.Name -eq $hQosPolicy.Name}).PriorityValue8021Action
         }
         if($hQosPolicy.NetDirectPortMatchCondition -ne '0') { 
           it "Verify [host] entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter Priority - {$($cQoSPolicy.NetDirectPortMatchCondition)} match [baseline]" {
-            $hQosPolicy.NetDirectPortMatchCondition | Should Be ($POVFConfiguration.NetQos.NetQosPolicies | Where-Object {$PSItem.Name -eq $hQosPolicy.Name}).NetDirectPortMatchCondition
+            $hQosPolicy.NetDirectPortMatchCondition | Should -Be ($POVFConfiguration.NetQos.NetQosPolicies | Where-Object {$PSItem.Name -eq $hQosPolicy.Name}).NetDirectPortMatchCondition
           }
         }
         if($hQosPolicy.IPProtocolMatchCondition -ne 'None'){ 
           it "Verify [host] entry for QoS Policy, name - {$($cQoSPolicy.Name)}, parameter Priority - {$($cQoSPolicy.IPProtocolMatchCondition)} match [baseline]" {
-            $hQosPolicy.IPProtocolMatchCondition | Should Be ($POVFConfiguration.NetQos.NetQosPolicies | Where-Object {$PSItem.Name -eq $hQosPolicy.Name}).IPProtocolMatchCondition
+            $hQosPolicy.IPProtocolMatchCondition | Should -Be ($POVFConfiguration.NetQos.NetQosPolicies | Where-Object {$PSItem.Name -eq $hQosPolicy.Name}).IPProtocolMatchCondition
           }
         }
       }
@@ -132,66 +133,60 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
   }
   Context "Verify NetQoS DcbxSetting configuration" {
     it "Verify [host] NetQosDCBxSetting configuration - {$($POVFConfiguration.NetQos.NetQosDcbxSetting.Willing)} match [baseline]" {
-      $hostNetQoSConfiguration.NetQosDcbxSetting.Willing | Should Be $POVFConfiguration.NetQos.NetQosDcbxSetting.Willing
+      $hostNetQoSConfiguration.NetQosDcbxSetting.Willing | Should -Be $POVFConfiguration.NetQos.NetQosDcbxSetting.Willing
     }
   }
   Context 'Verify NetQos Flow Control configuration' { 
-    $currentQosFlowControl = $hostNetQoSConfiguration.NetQoSFlowControl
-    foreach ($hQosFlowContrlEntry in ($currentQosFlowControl | Where-Object {$PSItem.Enabled -eq $true}) ) {
-      it "Verify [host] QosFlowControl priority - {$($hQosFlowContrlEntry.Priority)} - {Enabled} match [baseline]" {
-        $hQosFlowContrlEntry.Priority | Should -BeIn  $POVFConfiguration.NetQos.NetQosFlowControl.Enabled
-      }
+    it "Verify [host] QosFlowControl priority - [Enabled] match [baseline]" {
+      $hostNetQoSConfiguration.NetQoSFlowControl.Enabled | Should -BeIn  $POVFConfiguration.NetQos.NetQosFlowControl.Enabled
     }
-    foreach ($hQosFlowContrlEntry in ($currentQosFlowControl | Where-Object {$PSItem.Enabled -eq $false}) ) {
-      it "Verify [host] QosFlowControl priority - {$($hQosFlowContrlEntry.Priority)} - {Disabled} match [baseline]" {
-        $hQosFlowContrlEntry.Priority | Should -BeIn  $POVFConfiguration.NetQos.NetQosFlowControl.Disabled
-      }
+    it "Verify [host] QosFlowControl priority - [Disabled] match [baseline]" {
+      $hostNetQoSConfiguration.NetQoSFlowControl.Disabled | Should -BeIn  $POVFConfiguration.NetQos.NetQosFlowControl.Disabled
     }
   }
   Context "Verify NetQos Traffic Class Configuration" { 
-    $currentQosTrafficClass = $hostNetQoSConfiguration.NetQosTrafficClass
-    if ($POVFConfiguration.NetQos.NetQosTrafficClass){
-      foreach ($hQosTrafficClass in $currentQosTrafficClass){
-        #verify if all host options are in baseline configuration files. 
-        it "Verify [host] entry QoSTrafficClass, name - {$($hQosTrafficClass.Name)} match [baseline]" { 
-          $hQosTrafficClass.Name | Should -BeIn $POVFConfiguration.NetQos.NetQosTrafficClass.Name
-        }
-        it "Verify [host] entry QoSTrafficClass, name - {$($hQosTrafficClass.Priority)} match [baseline], parameter Priority - {$($hQosTrafficClass.Priority)}" {
-          $hQosTrafficClass.Priority | Should Be ($POVFConfiguration.NetQos.NetQosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Priority
-        }
-        it "Verify [host] entry QoSTrafficClass, name - {$($hQosTrafficClass.BandwidthPercentage)} match [baseline], parameter BandwidthPercentage - {$($hQosTrafficClass.BandwidthPercentage)}" {
-          $hQosTrafficClass.BandwidthPercentage | Should Be ($POVFConfiguration.NetQos.NetQosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).BandwidthPercentage
-        }
-        it "Verify [host] entry QoSTrafficClass, name - {$($hQosTrafficClass.Algorithm)} match [baseline], parameter Algorithm - {$($hQosTrafficClass.Algorithm)}" {
-          $hQosTrafficClass.Algorithm | Should Be ($POVFConfiguration.NetQos.NetQosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}).Algorithm
-        }
+    foreach ($hQosTrafficClass in $hostNetQoSConfiguration.NetQosTrafficClass){
+      $configQosTrafficClass = $POVFConfiguration.NetQos.NetQosTrafficClass | Where-Object {$PSItem.Name -eq $hQosTrafficClass.Name}
+      #verify if all host options are in baseline configuration files. 
+      it "Verify [host] entry QoSTrafficClass, name - {$($hQosTrafficClass.Name)} match [baseline]" { 
+        $hQosTrafficClass.Name | Should -Be $configQosTrafficClass.Name
       }
+      it "Verify [host] entry QoSTrafficClass, name - {$($hQosTrafficClass.Priority)} match [baseline], parameter Priority - {$($hQosTrafficClass.Priority)}" {
+        $hQosTrafficClass.Priority | Should -Be $configQosTrafficClass.Priority
+      }
+      it "Verify [host] entry QoSTrafficClass, name - {$($hQosTrafficClass.BandwidthPercentage)} match [baseline], parameter BandwidthPercentage - {$($hQosTrafficClass.BandwidthPercentage)}" {
+        $hQosTrafficClass.BandwidthPercentage | Should -Be $configQosTrafficClass.BandwidthPercentage
+      }
+      it "Verify [host] entry QoSTrafficClass, name - {$($hQosTrafficClass.Algorithm)} match [baseline], parameter Algorithm - {$($hQosTrafficClass.Algorithm)}" {
+        $hQosTrafficClass.Algorithm | Should -Be $configQosTrafficClass.Algorithm
+      }
+    }
+    if ($POVFConfiguration.NetQos.NetQosTrafficClass){
       foreach ($cQoSTrafficClass in $POVFConfiguration.NetQos.NetQosTrafficClass) {
+        $currentQosTrafficClass = $hostNetQoSConfiguration.NetQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}
         #Verify if all entries from baseline configuration are deployed to host
         it "Verify [baseline] entry QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} match [host]" { 
-          $cQoSTrafficClass.Name | Should -BeIn $currentQosTrafficClass.Name
+          $cQoSTrafficClass.Name | Should -Be $currentQosTrafficClass.Name
         }
         it "Verify [baseline] entry QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} match [host], parameter Priority - {$($cQoSTrafficClass.Priority)}" {
-          $cQoSTrafficClass.Priority | Should Be ($currentQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).Priority
+          $cQoSTrafficClass.Priority | Should -Be $currentQosTrafficClass.Priority
         }
         it "Verify [baseline] entry QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} match [host], parameter BandwidthPercentage - {$($cQoSTrafficClass.BandwidthPercentage)}" {
-          $cQoSTrafficClass.BandwidthPercentage | Should Be ($currentQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).BandwidthPercentage
+          $cQoSTrafficClass.BandwidthPercentage | Should -Be  $currentQosTrafficClass.BandwidthPercentage
         }
         it "Verify [baseline] entry QoSTrafficClass, name - {$($cQoSTrafficClass.Name)} match [host], parameter Algorithm - {$($cQoSTrafficClass.Algorithm)}" {
-          $cQoSTrafficClass.Algorithm | Should Be ($currentQosTrafficClass | Where-Object {$PSItem.Name -eq $cQoSTrafficClass.Name}).Algorithm
+          $cQoSTrafficClass.Algorithm | Should -Be  $currentQosTrafficClass.Algorithm
         }
       }
     }
   }
   Context "Verify [host] priority match in QosFlowControl, QosPolicies and QosTraffic Class" {
-    foreach ($hQosFlowContrlEntry in ($currentQosFlowControl | Where-Object {$PSItem.Enabled -eq $true}) ) {
-      it "Verify [host] QoSFlowControl entry {$($hQosFlowContrlEntry.Name)} priority {$($hQosFlowContrlEntry.Priority)} match QoS Policies "{
-        $hQosFlowContrlEntry.Priority | Should -BeIn ($hostNetQoSConfiguration.NetQosPolicies| Where-Object {$PSItem.Name -notmatch 'Default'}).PriorityValue
-      }
-      it "Verify [host] QoSFlowControl entry {$($hQosFlowContrlEntry.Name)} priority {$($hQosFlowContrlEntry.Priority)} match QoS Traffic Class "{
-        $hQosFlowContrlEntry.Priority | Should -BeIn ($currentQosTrafficClass| Where-Object {$PSItem.Name -notmatch 'Default'}).Priority
-      }
+    it "Verify [host] QoSFlowControl entry [Enabled] priorities match QoS Policies "{
+      $hostNetQoSConfiguration.NetQoSFlowControl.Enabled | Should -BeIn $hostNetQoSConfiguration.NetQosPolicies.PriorityValue8021Action
     }
+    it "Verify [host] QoSFlowControl entry [Enabled] priorities match QoS Traffic Class" {
+      $hostNetQoSConfiguration.NetQoSFlowControl.Enabled | Should -BeIn $hostNetQoSConfiguration.NetQosTrafficClass.Priority
+    } 
   }
 }
 Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($POVFConfiguration.ClusterName)} Teaming Configuration Status" -Tags @('Configuration','Teaming') {
@@ -199,18 +194,21 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
     Context "Verify Network Team Configuration" {
       $hostTeamConfiguration = Get-POVFTeamingConfiguration -PSSession $POVFPSSession
       foreach ($cTeam in $POVFConfiguration.Team) {
-        $currentTeam = $hostTeamConfiguration.Team | Where-Object {$PSItem.Name -eq $cTeam.Name}
-        it "Verify [host] Team {$($cTeam.TeamName)} exists" {
+        $currentTeam = $hostTeamConfiguration | Where-Object {$PSItem.Name -eq $cTeam.Name}
+        it "Verify [host] Team {$($cTeam.Name)} exists" {
           $currentTeam | Should -Not -BeNullOrEmpty
         }
-        it "Verify [host] Team {$($cTeam.TeamName)} TeamingMode match [baseline]" {
-          $currentTeam.TeamingMode  | Should Be $currentTeam.TeamingMode 
+        it "Verify [host] Team {$($cTeam.Name)} name matches [baseline]" {
+          $currentTeam | Should -Not -BeNullOrEmpty
         }
-        it "Verify [host] Team {$($cTeam.TeamName)} LoadBalancingAlgorithm match [baseline]" {
+        it "Verify [host] Team {$($cTeam.Name)} TeamingMode match [baseline]" {
+          $currentTeam.TeamingMode  | Should Be $cTeam.TeamingMode 
+        }
+        it "Verify [host] Team {$($cTeam.Name)} LoadBalancingAlgorithm match [baseline]" {
           $currentTeam.LoadBalancingAlgorithm  | Should Be $cTeam.LoadBalancingAlgorithm
         }
-        it "Verify [host] Team {$($cTeam.TeamName)} TeamMembers match [baseline]" {
-          $cTeam.Members | Should -BeIn $currentTeam.Members 
+        it "Verify [host] Team {$($cTeam.Name)} TeamMembers match [baseline]" {
+          $currentTeam.Members | Should -BeIn $cTeam.Members 
         }
       }
     }
@@ -289,32 +287,14 @@ Describe "Verify Server {$($POVFConfiguration.ComputerName)} in Cluster - {$($PO
   Context 'Verify Roles configuration' {
     $currentRoles = Get-POVFRolesConfiguration -PSSession $POVFPSSession
     if($POVFConfiguration.Roles.Present){
-      foreach($presentRole in $POVFConfiguration.Roles.Present) {
-        #Verify if roles from host are in baseline
-        it "Verify [host] role {$presentRole} - [present] match configuration [baseline]" {
-          $presentRole | Should -BeIn @($curentRoles.Present)
-        }
-      }
-      foreach($currentRole in $currentRoles.Present) {
-        #Verify if roles from baseline are in host
-        it "Verify [baseline] role {$currentRole} are in [host]" {
-          $currentRole | Should -BeIn @($POVFConfiguration.Roles.Present)
-        }
+      it "Verify [host] role [Present] match configuration [baseline]" {
+        $currentRoles.Present | Should -BeIn $POVFConfiguration.Roles.Present
       }
     }
     if($POVFConfiguration.Roles.Absent){
-      foreach($absentRole in $POVFConfiguration.Roles.Absent) {
-        #Verify if absent roles from host are in baseline as absent
-        it "Verify [host] role {$absentRole} - [absent] match configuration [baseline]" {
-          $absentRole | Should -BeIn @($curentRoles.Absent)
-        }
+      it "Verify [host] role [Absent] match configuration [baseline]" {
+        $currentRoles.Absent | Should -BeIn $POVFConfiguration.Roles.Absent
       }
-      foreach($currentRole in $currentRoles.Absent) {
-        #Verify if absent roles from baseline are not in host
-        it "Verify [baseline] role {$currentRole} are not in [host]" {
-          $currentRole | Should -BeIn @($POVFConfiguration.Roles.Absent)
-        }
-      }   
     }
   }
 }

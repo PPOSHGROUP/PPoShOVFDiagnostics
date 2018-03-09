@@ -79,11 +79,11 @@ function Get-POVFNetQoSConfiguration {
         $policy
       }
     }  
-    $netQoSTrafficClass += Invoke-Command -session $POVFPSSession -scriptBlock {
+    $netQoSTrafficClass = Invoke-Command -session $POVFPSSession -scriptBlock {
       Get-NetQosTrafficClass| ForEach-Object {
         @{
           Name=$PSItem.Name
-          Priority=$PSItem.Priority
+          Priority=@($PSItem.Priority)
           BandwidthPercentage=$PSItem.BandwidthPercentage
           Algorithm =$PSItem.Algorithm.ToString()
         }
@@ -93,7 +93,7 @@ function Get-POVFNetQoSConfiguration {
       $NetQoSParams.NetQosTrafficClass += foreach ($trafficClass in $netQoSTrafficClass) {
         [ordered]@{
           Name = $trafficClass.Name
-          Priority = $trafficClass.Priority -Join ','
+          Priority = $trafficClass.Priority
           BandwidthPercentage= $trafficClass.BandwidthPercentage
           Algorithm= $trafficClass.Algorithm.ToString()
         }
