@@ -59,7 +59,7 @@ function Get-POVFHyperVNodeConfiguration {
       $NodeConfiguration.Domain = $hostEnvironment.Domain
       $NodeConfiguration.NIC += Get-POVFNetAdapterConfiguration -Physical -PSSession $POVFPSSession
       $NodeConfiguration.NetQoS += Get-POVFNetQoSConfiguration -PSSession $POVFPSSession
-      #$NodeConfiguration.Registry += 
+      $NodeConfiguration.Registry += Get-POVFRegistryConfiguration  -PSSession $POVFPSSession
       $NodeConfiguration.Team += Get-POVFTeamingConfiguration -PSSession $POVFPSSession
       $NodeConfiguration.VmSwitch += Get-POVFVMSwitchConfiguration -PSSession $POVFPSSession
       $NodeConfiguration.Roles += Get-POVFRolesConfiguration -PSSession $POVFPSSession

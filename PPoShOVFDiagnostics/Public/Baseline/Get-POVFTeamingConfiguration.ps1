@@ -49,7 +49,7 @@ function Get-POVFTeamingConfiguration {
       $hostTeams += Invoke-Command $POVFPSSession -ScriptBlock {
         Get-NetLbfoTeam | ForEach-Object {
           @{
-            TeamName = $PSItem.Name
+            Name = $PSItem.Name
             TeamingMode = $PSitem.TeamingMode.ToString()
             LoadBalancingAlgorithm = $PSitem.LoadBalancingAlgorithm.ToString()
             Members =  @($PSItem.Members)
@@ -59,7 +59,7 @@ function Get-POVFTeamingConfiguration {
       #to Avoid issues with PSComputerName and RunspaceId added to each object from invoke-command - I'm reassigning each hashtable
       foreach ($hostTeam in $hostTeams) {   
         [ordered]@{
-          TeamName = $hostTeam.Name
+          Name = $hostTeam.Name
           TeamingMode = $hostTeam.TeamingMode
           LoadBalancingAlgorithm = $hostTeam.LoadBalancingAlgorithm
           Members =  @($hostTeam.Members)

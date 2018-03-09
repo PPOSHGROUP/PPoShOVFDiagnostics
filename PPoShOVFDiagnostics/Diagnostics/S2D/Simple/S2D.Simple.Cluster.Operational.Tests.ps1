@@ -2,8 +2,8 @@ param (
   $POVFConfiguration,
   [System.Management.Automation.PSCredential]$POVFCredential
 )
-$POVFPSSession = New-PSSessionCustom -ComputerName $POVFConfiguration.ClusterName -Credential $POVFCredential -SessionName 'POVF'
-Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Operational Status" -Tag 'Operational' {
+$POVFPSSession = New-PSSessionCustom -ComputerName $POVFConfiguration.Name -Credential $POVFCredential -SessionName 'POVF'
+Describe "Verify [host] Cluster {$($POVFConfiguration.Name)} Operational Status" -Tag 'Operational' {
   Context "Verify [host] Core Cluster Resources"{
     $coreClusterResources = Invoke-Command -Session $POVFPSSession -ScriptBlock {
       Get-ClusterResource | Where-Object {$PSItem.OwnerGroup -eq 'Cluster Group'} | Select-Object -Property Name,State,OwnerGroup,ResourceType
@@ -37,7 +37,7 @@ Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Operational 
     }
   }
 }
-Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Nodes Operational Status" -Tag 'Operational' {
+Describe "Verify [host] Cluster {$($POVFConfiguration.Name)} Nodes Operational Status" -Tag 'Operational' {
   Context "Verify [host] Nodes are Online" {
     $clusterNodes = Invoke-Command -Session $POVFPSSession -ScriptBlock { Get-ClusterNode }
     foreach($cNode in $clusterNodes){
@@ -50,7 +50,7 @@ Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Nodes Operat
     }
   }
 }
-Describe "Verify [host] Cluster {$($POVFConfiguration.ClusterName)} Storage" -Tag 'Operational' {
+Describe "Verify [host] Cluster {$($POVFConfiguration.Name)} Storage" -Tag 'Operational' {
   Context "Verify [host] Cluster Shared Volumes State" {
     $clusterSharedVolumes += Invoke-Command -Session $POVFPSSession -ScriptBlock {
       Get-ClusterSharedVolume | foreach-object {

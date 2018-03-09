@@ -102,7 +102,7 @@ function Get-POVFNetQoSConfiguration {
     $NetQosDcbxSetting = Invoke-Command -session $POVFPSSession -scriptBlock {
       Get-NetQosDcbxSetting
     }
-    $NetQoSParams.NetQosDcbxSetting =$NetQosDcbxSetting.Willing
+    $NetQoSParams.NetQosDcbxSetting.Willing =$NetQosDcbxSetting.Willing
     $flowControl =Invoke-Command -session $POVFPSSession -scriptBlock { 
       Get-NetQosFlowControl
     }
