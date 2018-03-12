@@ -1,4 +1,4 @@
-function Get-POVFS2DClusterConfiguration {
+function Get-POVFConfigurationS2DCluster {
   [CmdletBinding()]
   param(
     [Parameter(Mandatory,

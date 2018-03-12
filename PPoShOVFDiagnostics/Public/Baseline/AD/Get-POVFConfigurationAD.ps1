@@ -1,4 +1,4 @@
-function Get-POVFADConfiguration {
+function Get-POVFConfigurationAD {
   <#
       .SYNOPSIS
       Short description

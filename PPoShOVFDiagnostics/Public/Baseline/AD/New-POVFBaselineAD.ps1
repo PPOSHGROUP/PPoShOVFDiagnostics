@@ -27,7 +27,7 @@ function New-POVFBaselineAD {
     #endregion
     
     #region Get Configuration from environment
-    $ForestConfig = Get-POVFADConfiguration @queryParams
+    $ForestConfig = Get-POVFConfigurationAD @queryParams
     
     #TODO
     #Get DC configuration

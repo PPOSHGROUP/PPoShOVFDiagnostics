@@ -1,97 +1,99 @@
 function New-POVFBaselineDHCP {
-    <#
-    .SYNOPSIS
-    Short description
-    
-    .DESCRIPTION
-    Long description
-    
-    .PARAMETER POVFConfigurationFolder
-    Parameter description
-    
-    .PARAMETER Credential
-    Parameter description
-    
-    .EXAMPLE
-    An example
-    
-    .NOTES
-    General notes
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true,HelpMessage='Folder for baseline Configuration folder structure',
-            ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
-            [ValidateScript({Test-Path -Path $_ -PathType Container -IsValid})]
-        [System.String]
-        $POVFConfigurationFolder,
-
-        [Parameter(Mandatory=$false,
-            ValueFromPipeline,ValueFromPipelineByPropertyName)]
-        [System.Management.Automation.Credential()][System.Management.Automation.PSCredential]
-        $Credential
-    )
-    process{
-        New-Item -Path $POVFConfigurationFolder -ItemType Directory -ErrorAction SilentlyContinue
-        $serviceConfigurationFile = 'DHCP.ServiceConfiguration.psd1'
+  [CmdletBinding()]
+  param (
         
-
-
-
-
-        #region Get data for $serviceConfiguration
-        $dhcpFromAD = @(Get-DhcpServerInDC | Select-Object -ExpandProperty DNSName)
-        if($dhcpFromAD) {
-            $serviceConfiguration = @"
-@{
-    DHCPServers = @($($dhcpFromAD -join ','))
-}
-"@
-        }
-        $serviceConfiguration | Out-File (Join-Path -Path $POVFConfigurationFolder -ChildPath $serviceConfigurationFile )
-        #endregion
-        foreach ($node in $dhcpFromAD) {
-            $nodePSSession = New-PSSessionCustom -ComputerName $node -Credential $Credential
-            $nodeConfig = Invoke-Command -Session $nodePSSession -ScriptBlock {
-                $dhcpServerDatabase = Get-DhcpServerDatabase
-                $dhcpserverDNSCredential =  Get-DhcpServerDnsCredential
-                $dhcpserverDNSCredentialString = "{0}\{1}" -f $dhcpserverDNSCredential.DomainName, $dhcpserverDNSCredential.Username
-                @{
-                    DHCPServerDNSCredentials = $dhcpserverDNSCredentialString
-                    Binding = (Get-DhcpServerv4Binding).IPAddress.IPAddressToString
-                    ServerSettings = @{
-                        BackupInterval = $dhcpServerDatabase.BackupInterval
-                        CleanupInterval = $dhcpServerDatabase.CleanupInterval
-                        LoggingEnabled = $dhcpServerDatabase.LoggingEnabled
-                    }
-                    AuditLog = ('${0}' -f (Get-DhcpServerAuditLog).Enable)
-                }      
-            }
-            $nodeFolderName = (($node).Split('.') | Select-Object -First 1).ToString().ToUpper()
-            $nodeFolder = New-Item -Path $POVFConfigurationFolder -Name $nodeFolderName -ItemType Directory
-            $nodeConfig
-            $nodeConfiguration = @"
-@{
-    ComputerName = $node
-    DHCPServerDNSCredentials = $($nodeConfig.DHCPServerDNSCredentials)
-    Binding = $($nodeConfig.Binding)
-    ServerSettings = @{
-        BackupInterval = $($nodeConfig.ServerSettings.BackupInterval)
-        CleanupInterval = $($nodeConfig.ServerSettings.CleanupInterval)
-        LoggingEnabled = $$($nodeConfig.ServerSettings.LoggingEnabled)
+    [Parameter(Mandatory,
+    ParameterSetName='ComputerName')]
+    [ValidateNotNullOrEmpty()]
+    [System.String]
+    $ComputerName,
+    
+    [Parameter(Mandatory=$false,
+    ParameterSetName='ComputerName')]
+    [ValidateNotNullOrEmpty()]
+    [System.Management.Automation.PSCredential]
+    $Credential,
+  
+    [Parameter(Mandatory=$false,
+    ParameterSetName='ComputerName')]
+    [ValidateNotNullOrEmpty()]
+    [string]
+    $ConfigurationName,
+        
+    [Parameter(Mandatory,
+    ParameterSetName='PSCustomSession')]
+    [ValidateNotNullOrEmpty()]
+    [System.Management.Automation.Runspaces.PSSession]
+    $PSSession,
+    
+    [Parameter(Mandatory=$true)]
+    [System.String]
+    [ValidateScript({Test-Path -Path $PSItem -IsValid})]
+    $POVFConfigurationFolder
+      
+  )
+  process{
+    if($PSBoundParameters.ContainsKey('ComputerName')) { 
+      $sessionParams = @{
+        ComputerName = $ComputerName
+        SessionName = "POVF-$ComputerName"
+      }
+      if($PSBoundParameters.ContainsKey('ConfigurationName')){
+        $sessionParams.ConfigurationName = $ConfigurationName
+      }
+      if($PSBoundParameters.ContainsKey('Credential')){
+        $sessionParams.Credential = $Credential
+      }
+      $POVFPSSession = New-PSSessionCustom @SessionParams
     }
-    AuditLog = $$($nodeConfig.AuditLog)
-}            
-"@
-            $nodeConfiguration | Out-File (Join-Path -Path $nodeFolder -ChildPath $serviceConfigurationFile )
-
-
-            $reservationFolder = New-Item -Path $nodeFolder -Name 'Reservations' -ItemType Directory
-
-
-            $scopeFolder = New-Item -Path $nodeFolder -Name 'Scopes' -ItemType Directory
-        }
-
-
+    if($PSBoundParameters.ContainsKey('PSSession')){
+      $POVFPSSession = $PSSession
     }
+    #region path variable initialization
+    if(-not (Test-Path $POVFConfigurationFolder)) {
+      [void](New-Item -Path $POVFConfigurationFolder -ItemType Directory)
+    }
+    $nonNodeDataPath = (Join-Path -Path $POVFConfigurationFolder -childPath 'NonNodeData')
+    $allNodesDataPath = (Join-Path -Path $POVFConfigurationFolder -childPath 'AllNodes')
+      
+    if(-not (Test-Path $nonNodeDataPath)) {
+      [void](New-Item -Path $nonNodeDataPath -ItemType Directory)
+    }
+    if(-not (Test-Path $allNodesDataPath)) {
+      [void](New-Item -Path $allNodesDataPath -ItemType Directory)
+    }
+    #endregion
+    #region Get Global Configuration
+    $DHCPConfig = Get-POVFConfigurationDHCPGlobal -PSSession $POVFPSSession
+    $dhcpFile = Join-Path -Path $nonNodeDataPath -childPath ('DHCP.{0}.Configuration.json' -f $DHCPConfig.Domain)
+    $DHCPConfig | ConvertTo-Json -Depth 99 | Out-File -FilePath $dhcpFile
+    #endregion
+    #Get Nodes configuration
+    foreach ($node in $DHCPConfig.ServersInAD.DNSName) {
+      if($PSBoundParameters.ContainsKey('ComputerName')) { 
+        $sessionParams = @{
+          ComputerName = $node
+          SessionName = "POVF-$node"
+        }
+        if($PSBoundParameters.ContainsKey('ConfigurationName')){
+          $sessionParams.ConfigurationName = $ConfigurationName
+        }
+        if($PSBoundParameters.ContainsKey('Credential')){
+          $sessionParams.Credential = $Credential
+        }
+        $POVFPSSessionNode = New-PSSessionCustom @SessionParams
+      }
+      if($PSBoundParameters.ContainsKey('PSSession')){
+        $POVFPSSessionNode = $PSSession
+      }
+        
+      $nodeConfig = Get-POVFConfigurationDHCPNode -PSSession $POVFPSSessionNode
+      $nodeFile = Join-Path -Path $allNodesDataPath -childPath ('{0}.Configuration.json' -f $nodeConfig.ComputerName)
+      $nodeConfig |  ConvertTo-Json -Depth 99 | Out-File -FilePath $nodeFile
+      Remove-PSSession $POVFPSSessionNode.Name -ErrorAction SilentlyContinue  
+    }
+    if(-not ($PSBoundParameters.ContainsKey('PSSession'))){
+      Remove-PSSession -Name $POVFPSSession.Name -ErrorAction SilentlyContinue   
+    }
+  }
 }

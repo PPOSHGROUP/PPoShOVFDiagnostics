@@ -1,4 +1,4 @@
-function Get-POVFHyperVNodeConfiguration {
+function Get-POVFConfigurationHyperVNode {
   [CmdletBinding()]
   param(
     [Parameter(Mandatory,

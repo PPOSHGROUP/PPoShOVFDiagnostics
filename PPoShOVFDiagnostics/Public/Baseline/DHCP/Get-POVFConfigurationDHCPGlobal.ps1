@@ -1,32 +1,30 @@
-function Get-POVFHyperVConfiguration {
+function Get-POVFConfigurationDHCPGlobal {
+
   [CmdletBinding()]
-  param (
-  
+  param(
     [Parameter(Mandatory,
     ParameterSetName='ComputerName')]
     [ValidateNotNullOrEmpty()]
     [System.String]
     $ComputerName,
-  
+
     [Parameter(Mandatory=$false,
     ParameterSetName='ComputerName')]
+    [ValidateNotNullOrEmpty()]
     [System.Management.Automation.PSCredential]
     $Credential,
-  
+    
     [Parameter(Mandatory=$false,
     ParameterSetName='ComputerName')]
     [string]
     $ConfigurationName,
-
+  
     [Parameter(Mandatory,
     ParameterSetName='PSCustomSession')]
     [System.Management.Automation.Runspaces.PSSession]
     $PSSession
-
-
   )
   process{
-    #region Variables set
     if($PSBoundParameters.ContainsKey('ComputerName')) { 
       $sessionParams = @{
         ComputerName = $ComputerName
@@ -43,28 +41,24 @@ function Get-POVFHyperVConfiguration {
     if($PSBoundParameters.ContainsKey('PSSession')){
       $POVFPSSession = $PSSession
     }
-
-    #endregion
-    $hostProperties = Invoke-Command -session $POVFPSSession -scriptBlock {
-      Get-VMHost 
-    }
-    @{
-      VirtualHardDiskPath = $hostProperties.VirtualHardDiskPath
-      VirtualMachinePath =  $hostProperties.VirtualMachinePath
-      LiveMigrations =@{
-        Enabled = $hostProperties.VirtualMachineMigrationEnabled
-        Simultaneous = $hostProperties.MaximumVirtualMachineMigrations
+    #Invoke-Command -Session $POVFPSSession -ScriptBlock { 
+      $dhcpInAD = Get-DhcpServerInDC 
+      $dhcpConfig = [ordered]@{
+        Domain = $env:USERDNSDOMAIN
+        ServersInAD = @()
       }
-      StorageMigrations =@{
-        Simultaneous = $hostProperties.MaximumStorageMigrations
+      if($dhcpInAD){
+        $dhcpConfig.ServersInAD += foreach ($dhcp in $dhcpInAD){
+          [ordered]@{
+            DnsName = $dhcp.DnsName
+            IPAddress = $dhcp.IPAddress.IPAddressToString
+          }
+        }
       }
-      NumaSpanning = @{
-        Enabled = $hostProperties.NumaSpanningEnabled
-      }
-    }
-
+      $dhcpConfig
+    #}
     if(-not ($PSBoundParameters.ContainsKey('PSSession'))){
-      Remove-PSSession -Name $POVFPSSession.Name -ErrorAction SilentlyContinue  
+      Remove-PSSession -Name $POVFPSSession.Name -ErrorAction SilentlyContinue   
     }
   }
 }

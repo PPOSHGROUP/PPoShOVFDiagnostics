@@ -6,7 +6,7 @@ $queryParams = @{
   ComputerName = $POVFConfiguration.FSMORoles.SchemaMaster 
   Credential = $POVFCredential
 }
-$currentForestConfig = Get-POVFADConfiguration @queryParams
+$currentForestConfig = Get-POVFConfigurationAD @queryParams
 Describe 'Verify [environment] Active Directory Forest configuration status' -Tags @('Forest','Configuration'){
   Context "Verify Forest {$($POVFConfiguration.Name)} Configuration" {
     it "Verify [host] Forest Name {$($POVFConfiguration.Name)} should match [baseline]" {

@@ -65,7 +65,7 @@ function New-POVFBaselineS2DCluster {
     #endregion
     
     #Get Cluster
-    $ClusterConfig = Get-POVFS2DClusterConfiguration -PSSession $POVFPSSession
+    $ClusterConfig = Get-POVFConfigurationS2DCluster -PSSession $POVFPSSession
     $clusterFile = Join-Path -Path $nonNodeDataPath -childPath ('{0}.Cluster.Configuration.json' -f $ClusterConfig.Name)
     $ClusterConfig | ConvertTo-Json -Depth 99 | Out-File -FilePath $clusterFile
     #Get Nodes
@@ -87,7 +87,7 @@ function New-POVFBaselineS2DCluster {
         $POVFPSSessionNode = $PSSession
       }
       
-      $nodeConfig = Get-POVFHyperVNodeConfiguration -PSSession $POVFPSSessionNode
+      $nodeConfig = Get-POVFConfigurationHyperVNode -PSSession $POVFPSSessionNode
       $nodeFile = Join-Path -Path $allNodesDataPath -childPath ('{0}.Configuration.json' -f $nodeConfig.ComputerName)
       $nodeConfig |  ConvertTo-Json -Depth 99 | Out-File -FilePath $nodeFile
       Remove-PSSession $POVFPSSessionNode.Name -ErrorAction SilentlyContinue  

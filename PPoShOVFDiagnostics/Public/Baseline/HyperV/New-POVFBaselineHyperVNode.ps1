@@ -67,7 +67,7 @@ function New-POVFBaselineHyperVNode {
       if($PSBoundParameters.ContainsKey('PSSession')){
         $POVFPSSession = $PSSession
       }
-      $computerConfig = Get-POVFHyperVNodeConfiguration -PSSession $POVFPSSession 
+      $computerConfig = Get-POVFConfigurationHyperVNode -PSSession $POVFPSSession 
       $computerFile = Join-Path -Path $allNodesDataPath -childPath ('{0}.Configuration.json' -f $computer)
       $computerConfig | ConvertTo-Json -Depth 99 | Out-File -FilePath $computerFile
     }
