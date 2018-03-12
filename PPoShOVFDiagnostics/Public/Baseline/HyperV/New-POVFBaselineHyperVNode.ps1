@@ -1,4 +1,4 @@
-function New-POVFHyperVNodeConfiguration {
+function New-POVFBaselineHyperVNode {
   [CmdletBinding()]
   param (
       
@@ -29,14 +29,25 @@ function New-POVFHyperVNodeConfiguration {
     [Parameter(Mandatory=$true)]
     [System.String]
     [ValidateScript({Test-Path -Path $PSItem -IsValid})]
-    $POVFConfigurationFolderHyperV
+    $POVFConfigurationFolder
     
   )
   process{
     
-    if(-not (Test-Path $POVFConfigurationFolderHyperV)        ) {
-      [void](New-Item -Path $POVFConfigurationFolderHyperV -ItemType Directory)
+    #region path variable initialization
+    if(-not (Test-Path $POVFConfigurationFolder)) {
+      [void](New-Item -Path $POVFConfigurationFolder -ItemType Directory)
     }
+    $nonNodeDataPath = (Join-Path -Path $POVFConfigurationFolder -childPath 'NonNodeData')
+    $allNodesDataPath = (Join-Path -Path $POVFConfigurationFolder -childPath 'AllNodes')
+    
+    if(-not (Test-Path $nonNodeDataPath)) {
+      [void](New-Item -Path $nonNodeDataPath -ItemType Directory)
+    }
+    if(-not (Test-Path $allNodesDataPath)) {
+      [void](New-Item -Path $allNodesDataPath -ItemType Directory)
+    }
+    #endregion
      
     #Get Nodes configuration
     foreach ($computer in $ComputerName) {
@@ -57,7 +68,7 @@ function New-POVFHyperVNodeConfiguration {
         $POVFPSSession = $PSSession
       }
       $computerConfig = Get-POVFHyperVNodeConfiguration -PSSession $POVFPSSession 
-      $computerFile = Join-Path -Path $POVFConfigurationFolderHyperV -childPath ('{0}.Configuration.json' -f $computer)
+      $computerFile = Join-Path -Path $allNodesDataPath -childPath ('{0}.Configuration.json' -f $computer)
       $computerConfig | ConvertTo-Json -Depth 99 | Out-File -FilePath $computerFile
     }
     if(-not ($PSBoundParameters.ContainsKey('PSSession'))){

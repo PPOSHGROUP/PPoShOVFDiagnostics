@@ -1,41 +1,37 @@
-function New-POVFBaselineADNoneNodeData {
+function Get-POVFADConfiguration {
   <#
-  .SYNOPSIS
-  Short description
+      .SYNOPSIS
+      Short description
   
-  .DESCRIPTION
-  Long description
+      .DESCRIPTION
+      Long description
   
-  .PARAMETER ComputerName
-  Parameter description
+      .PARAMETER ComputerName
+      Parameter description
   
-  .PARAMETER Credential
-  Parameter description
+      .PARAMETER Credential
+      Parameter description
   
-  .PARAMETER POVFADBaselineFile
-  Parameter description
+      .PARAMETER POVFADBaselineFile
+      Parameter description
   
-  .EXAMPLE
-  An example
+      .EXAMPLE
+      An example
   
-  .NOTES
-  General notes
+      .NOTES
+      General notes
   #>
   [CmdletBinding()]
   param(
     [Parameter(Mandatory=$true)]
+    [ValidateNotNullOrEmpty()]
     [System.String]
     $ComputerName,
 
     [Parameter(Mandatory=$false)]
+    [ValidateNotNullOrEmpty()]
     [System.Management.Automation.PSCredential]
-    $Credential,
-
-    [Parameter(Mandatory=$true)]
-    [System.String]
-    [ValidateScript({Test-Path -Path $PSItem -IsValid})]
-    $POVFADBaselineFile
-
+    $Credential
   )
   process{
     $queryParams = @{
@@ -44,79 +40,74 @@ function New-POVFBaselineADNoneNodeData {
     if($PSBoundParameters.ContainsKey('Credential')){
       $queryParams.Credential = $Credential
     }
-    #$ForestConfig = @()
-    #region Final PS Hashtable
+    #region Hashtable initialization
     $ForestConfig = [ordered]@{
-      Forest = [ordered]@{
-        Name = ''
-        ForestMode = ''
-        RootDomain = ''
-        GlobalCatalogs = @()
-        FSMORoles = [ordered]@{
-          SchemaMaster = ''
-          DomainNamingMaster = ''
-        }
-        Domains = @( 
-          <#
-          [ordered]@{
+      Name = $null
+      ForestMode = $null
+      RootDomain = $null
+      GlobalCatalogs = @()
+      FSMORoles = [ordered]@{
+        SchemaMaster = $null
+        DomainNamingMaster = $null
+      }
+      Domains = @( 
+        <#
+            [ordered]@{
             ChildDomains =@()
-            DNSRoot = ''
-            DomainMode = ''
+            DNSRoot = $null
+            DomainMode = $null
             FSMORoles = @{
-              InfrastructureMaster  = ''
-              RIDMaster = ''
-              PDCEmulator = ''
+            InfrastructureMaster  = $null
+            RIDMaster = $null
+            PDCEmulator = $null
             }
             ReadOnlyReplicaDirectoryServers = @()
             DHCPServers =@()
             DomainDefaultPasswordPolicy = @{
-              ComplexityEnabled = ''
-              LockoutDuration = ''
-              LockoutObservationWindow = ''
-              LockoutThreshold = ''
-              MinPasswordAge = ''
-              MaxPasswordAge =''
-              MinPasswordLength = ''
-              PasswordHistoryCount = ''
-              ReversibleEncryptionEnabled = ''
+            ComplexityEnabled = $null
+            LockoutDuration = $null
+            LockoutObservationWindow = $null
+            LockoutThreshold = $null
+            MinPasswordAge = $null
+            MaxPasswordAge =$null
+            MinPasswordLength = $null
+            PasswordHistoryCount = $null
+            ReversibleEncryptionEnabled = $null
             }
             HighGroups = @(
-              @{
-                Name = ''
-                Members = ''
-              }
+            @{
+            Name = $null
+            Members = $null
+            }
             )
-          }
-          #>
-          
-        )
-        Sites = @()
-        Trusts = @(
-          <#          
-              @{
-              Name = ''
-              Direction = ''
-              }
-          #>
-        )
-      }
+            }
+        #>
+      )
+      Sites = @()
+      Trusts = @(
+        <#          
+            @{
+            Name = $null
+            Direction = $null
+            }
+        #>
+      )
       
     }
-    #>
     #endregion
     #region Forest properties
     $currentADForest = Get-ADForest @queryParams
     $currentTrusts = Get-ADTrust -filter * @queryParams 
     
-    $ForestConfig.Forest.Name = $currentADForest.Name
-    $ForestConfig.Forest.ForestMode = $currentADForest.ForestMode.ToString()
-    $ForestConfig.Forest.RootDomain = $currentADForest.RootDomain
-    $ForestConfig.Forest.FSMORoles.DomainNamingMaster = $currentADForest.DomainNamingMaster
-    $ForestConfig.Forest.FSMORoles.SchemaMaster = $currentADForest.SchemaMaster
-    $ForestConfig.Forest.GlobalCatalogs += @($currentADForest.GlobalCatalogs)
+    $ForestConfig.Name = $currentADForest.Name
+    $ForestConfig.ForestMode = $currentADForest.ForestMode.ToString()
+    $ForestConfig.RootDomain = $currentADForest.RootDomain
+    $ForestConfig.FSMORoles.DomainNamingMaster = $currentADForest.DomainNamingMaster
+    $ForestConfig.FSMORoles.SchemaMaster = $currentADForest.SchemaMaster
+    $ForestConfig.GlobalCatalogs += @($currentADForest.GlobalCatalogs)
     #endregion
     #region domain properties
-    foreach ($ADdomain in $currentADForest.Domains) { 
+    $ForestConfig.Domains += foreach ($ADdomain in $currentADForest.Domains) { 
       $currentADDomainController = Get-ADDomainController -domainName $ADdomain -Discover
       $domainQueryParams = @{
         Server = $currentADDomainController.HostName[0]
@@ -125,25 +116,25 @@ function New-POVFBaselineADNoneNodeData {
       $currentADdomain = Get-ADDomain @domainQueryParams
       $DomainConfig =[ordered]@{
         ChildDomains =@()
-        DNSRoot = ''
-        DomainMode = ''
+        DNSRoot = $null
+        DomainMode = $null
         FSMORoles = @{
-          InfrastructureMaster  = ''
-          RIDMaster = ''
-          PDCEmulator = ''
+          InfrastructureMaster  = $null
+          RIDMaster = $null
+          PDCEmulator = $null
         }
         ReadOnlyReplicaDirectoryServers = @()
         DHCPServers =@()
         DomainDefaultPasswordPolicy = @{
-          ComplexityEnabled = ''
-          LockoutDuration = ''
-          LockoutObservationWindow = ''
-          LockoutThreshold = ''
-          MinPasswordAge = ''
-          MaxPasswordAge =''
-          MinPasswordLength = ''
-          PasswordHistoryCount = ''
-          ReversibleEncryptionEnabled = ''
+          ComplexityEnabled = $null
+          LockoutDuration = $null
+          LockoutObservationWindow = $null
+          LockoutThreshold = $null
+          MinPasswordAge = $null
+          MaxPasswordAge =$null
+          MinPasswordLength = $null
+          PasswordHistoryCount = $null
+          ReversibleEncryptionEnabled = $null
         }
         HighGroups = @()
       }
@@ -173,31 +164,29 @@ function New-POVFBaselineADNoneNodeData {
         PasswordHistoryCount = $currentDomainDefaultPasswordPolicy.PasswordHistoryCount
         ReversibleEncryptionEnabled = $currentDomainDefaultPasswordPolicy.ReversibleEncryptionEnabled
       }
-      $groups = @('Enterprise Admins','Schema Admins')
-      $DomainConfig.HighGroups = @()
-      foreach ($group in $groups){
-        $groupTemp = Get-ADGroupMember -Identity $group @domainQueryParams  
-        $DomainConfig.HighGroups += [ordered]@{ 
+      $groups = @('Enterprise Admins','Schema Admins') 
+      $DomainConfig.HighGroups += foreach ($group in $groups){
+        $groupMembers = Get-ADGroupMember -Identity $group @domainQueryParams 
+        [ordered]@{   
           Name = $group
-          Members = @($groupTemp.samaccountname)
+          Members = @($groupMembers.samaccountname)
         }
       }
-      $ForestConfig.Forest.Domains += $DomainConfig
+      $DomainConfig
     }
     #endregion
     #region sites properties
-    $ForestConfig.Forest.Sites = @($currentADForest.Sites)
+    $ForestConfig.Sites = @($currentADForest.Sites)
     #endregion
     #region Trust properties
-    $ForestConfig.Forest.Trusts = @()
-    foreach ($trust in $currentTrusts) {
-      $ForestConfig.Forest.Trusts += @{
+    $ForestConfig.Trusts += foreach ($trust in $currentTrusts) {
+      @{
         Name = $trust.Name
         Direction = $trust.Direction.ToString()
       }
-    }
-    
+    }    
     #endregion
-    $ForestConfig | ConvertTo-Json -Depth 99 | Out-File -FilePath  $POVFADBaselineFile 
+
+    $ForestConfig
   }
 }

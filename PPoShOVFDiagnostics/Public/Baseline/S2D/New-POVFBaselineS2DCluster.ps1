@@ -29,7 +29,7 @@ function New-POVFBaselineS2DCluster {
     [Parameter(Mandatory=$true)]
     [System.String]
     [ValidateScript({Test-Path -Path $PSItem -IsValid})]
-    $POVFConfigurationFolderS2D
+    $POVFConfigurationFolder
   
   )
   process{
@@ -49,13 +49,21 @@ function New-POVFBaselineS2DCluster {
     if($PSBoundParameters.ContainsKey('PSSession')){
       $POVFPSSession = $PSSession
     }
-    if(-not (Test-Path $POVFConfigurationFolderS2D)        ) {
-      [void](New-Item -Path $POVFConfigurationFolderS2D -ItemType Directory)
+    #region path variable initialization
+    if(-not (Test-Path $POVFConfigurationFolder)        ) {
+      [void](New-Item -Path $POVFConfigurationFolder -ItemType Directory)
     }
-    $nonNodeDataPath = (Join-Path -Path $POVFConfigurationFolderS2D -childPath 'NonNodeData')
-    $allNodesDataPath = (Join-Path -Path $POVFConfigurationFolderS2D -childPath 'AllNodes')
-    [void](New-Item -Path $nonNodeDataPath -ItemType Directory -force)
-    [void](New-Item -Path $allNodesDataPath -ItemType Directory -force)
+    $nonNodeDataPath = (Join-Path -Path $POVFConfigurationFolder -childPath 'NonNodeData')
+    $allNodesDataPath = (Join-Path -Path $POVFConfigurationFolder -childPath 'AllNodes')
+    
+    if(-not (Test-Path $nonNodeDataPath)) {
+      [void](New-Item -Path $nonNodeDataPath -ItemType Directory)
+    }
+    if(-not (Test-Path $allNodesDataPath)) {
+      [void](New-Item -Path $allNodesDataPath -ItemType Directory)
+    }
+    #endregion
+    
     #Get Cluster
     $ClusterConfig = Get-POVFS2DClusterConfiguration -PSSession $POVFPSSession
     $clusterFile = Join-Path -Path $nonNodeDataPath -childPath ('{0}.Cluster.Configuration.json' -f $ClusterConfig.Name)
