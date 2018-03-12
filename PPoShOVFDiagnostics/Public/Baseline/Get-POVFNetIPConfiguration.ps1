@@ -98,7 +98,7 @@ function Get-POVFNetIPConfiguration {
       }
     }
     if(-not ($PSBoundParameters.ContainsKey('PSSession'))){
-      Get-PSSession $POVFPSSession.Name -ErrorAction SilentlyContinue| Remove-PSSession -ErrorAction SilentlyContinue  
+      Remove-PSSession -Name $POVFPSSession.Name -ErrorAction SilentlyContinue   
     }
   }
 }

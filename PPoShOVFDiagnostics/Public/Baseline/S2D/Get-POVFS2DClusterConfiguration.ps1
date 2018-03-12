@@ -1,4 +1,4 @@
-function Get-POVFS2DClusterNoneNodeDataConfiguration {
+function Get-POVFS2DClusterConfiguration {
   [CmdletBinding()]
   param(
     [Parameter(Mandatory,
@@ -120,7 +120,7 @@ function Get-POVFS2DClusterNoneNodeDataConfiguration {
     #endregion
     #region Fill in object data
     $ClusterBaselineNoneNodeData = [ordered]@{
-      Name = $clusterConfig.Settings.Name
+      Name = ('{0}.{1}' -f  $clusterConfig.Settings.Name,$clusterConfig.Settings.Domain)
       Domain = $clusterConfig.Settings.Domain
       IPAddress = $clusterConfig.CoreClusterResources.ClusterIPAddress
       ClusterNodes = $clusterConfig.Nodes.NodeName
@@ -157,7 +157,7 @@ function Get-POVFS2DClusterNoneNodeDataConfiguration {
     #endregion
     #endregion
     if(-not ($PSBoundParameters.ContainsKey('PSSession'))){
-      Get-PSSession $POVFPSSession.Name -ErrorAction SilentlyContinue| Remove-PSSession -ErrorAction SilentlyContinue  
+      Remove-PSSession -Name $POVFPSSession.Name -ErrorAction SilentlyContinue   
     }
   }
 }

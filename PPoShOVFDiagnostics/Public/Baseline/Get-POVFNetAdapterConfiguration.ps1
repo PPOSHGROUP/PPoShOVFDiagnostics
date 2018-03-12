@@ -138,9 +138,11 @@ function Get-POVFNetAdapterConfiguration {
         if($NetAdapterRSS.Enabled) {
           $interfaceProperties.NetAdapterRSS =@{
             Enabled = $NetAdapterRSS.Enabled
-            Profile = ($NetAdapterRSS.Profile).ToString()
             BaseProcessorNumber =  $NetAdapterRSS.BaseProcessorNumber
             MaxProcessors =  $NetAdapterRSS.MaxProcessors
+          }
+          if($NetAdapterRSS.Profile) {
+            $interfaceProperties.Profile = ($NetAdapterRSS.Profile).ToString()
           }
         }
         if($NetAdapterRDMA) {
@@ -160,10 +162,9 @@ function Get-POVFNetAdapterConfiguration {
         $interfaceProperties
       }
     } 
-    #> 
-    
+
     if(-not ($PSBoundParameters.ContainsKey('PSSession'))){
-      Get-PSSession $POVFPSSession.Name -ErrorAction SilentlyContinue| Remove-PSSession -ErrorAction SilentlyContinue  
+      Remove-PSSession -Name $POVFPSSession.Name -ErrorAction SilentlyContinue   
     }
   }
 }

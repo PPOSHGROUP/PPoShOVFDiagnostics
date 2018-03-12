@@ -99,7 +99,7 @@ Describe "Verify [host] Cluster {$($POVFConfiguration.Name)} Storage" -Tag 'Oper
       IT "Verify [host] Cluster Volume {$($cVolume.Name)} Operational Status - [OK]" {
         $cVolume.OperationalStatus | Should -Be 'OK'
       }
-      IT "Verify [host] Cluster Volume {$($cVolume.Name)} Healt Status - [Healthy]" {
+      IT "Verify [host] Cluster Volume {$($cVolume.Name)} Health Status - [Healthy]" {
         $cVolume.HealthStatus | Should -Be 'Healthy'
       }
     }
@@ -110,5 +110,6 @@ Describe "Verify [host] Cluster {$($POVFConfiguration.Name)} Storage" -Tag 'Oper
       $storageJobs | Should Be $null
     }
   }
+  #Context Getphysical disk storagereliabilitycounter
 }
-Remove-PSSession $POVFPSSession.Name -ErrorAction SilentlyContinue  
+Remove-PSSession -Name $POVFPSSession.Name -ErrorAction SilentlyContinue   

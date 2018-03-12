@@ -52,7 +52,12 @@ function Get-POVFHostEnvironment {
       }
     }
     $cluster = Invoke-Command -session $POVFPSSession -scriptBlock {
-      Get-Cluster -ErrorAction SilentlyContinue
+      if (Get-Command Get-Cluster -ErrorAction SilentlyContinue) { 
+        Get-Cluster
+      }
+      else {
+        $null
+      }
     }
     $result = [ordered]@{
       ComputerName=$hostProperties.ComputerName
