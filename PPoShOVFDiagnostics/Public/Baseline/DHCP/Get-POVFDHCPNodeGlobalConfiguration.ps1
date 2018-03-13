@@ -64,7 +64,7 @@ function Get-POVFDHCPNodeGlobalConfiguration {
           IsDomainJoined = $dhcpServerSettings.isDomainJoined
           IsAuthorized = $dhcpServerSettings.isAuthorized
           NAPEnabled = $dhcpServerSettings.NAPEnabled
-          DynamicBoodP = $dhcpServerSettings.DynamicBootP
+          DynamicBootP = $dhcpServerSettings.DynamicBootP
         }
         DhcpServerv4DnsSetting=@{
           DeleteDnsRROnLeaseExpiry = $dhcpServerv4DnsSetting.DeleteDnsRROnLeaseExpiry

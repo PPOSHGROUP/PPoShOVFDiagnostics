@@ -97,8 +97,9 @@ function Get-POVFConfigurationAD {
     #endregion
     #region Forest properties
     $currentADForest = Get-ADForest @queryParams
+    Write-Progress -Activity 'Gathering AD Forest configuration' -Status "Get Forest {$($currentADForest.Name)} Environment configuration" -PercentComplete 5
     $currentTrusts = Get-ADTrust -filter * @queryParams 
-    
+       
     $ForestConfig.Name = $currentADForest.Name
     $ForestConfig.ForestMode = $currentADForest.ForestMode.ToString()
     $ForestConfig.RootDomain = $currentADForest.RootDomain
@@ -107,7 +108,9 @@ function Get-POVFConfigurationAD {
     $ForestConfig.GlobalCatalogs += @($currentADForest.GlobalCatalogs)
     #endregion
     #region domain properties
-    $ForestConfig.Domains += foreach ($ADdomain in $currentADForest.Domains) { 
+    Write-Progress -Activity 'Gathering AD Forest configuration' -Status "Get AD Domains configuration" -PercentComplete 30
+    $ForestConfig.Domains += foreach ($ADdomain in $currentADForest.Domains) {
+      Write-Progress -Activity 'Gathering AD Forest configuration' -Status "Get AD Domain {$($ADdomain)} configuration" -PercentComplete 50 
       $currentADDomainController = Get-ADDomainController -domainName $ADdomain -Discover
       $domainQueryParams = @{
         Server = $currentADDomainController.HostName[0]
@@ -164,6 +167,7 @@ function Get-POVFConfigurationAD {
         PasswordHistoryCount = $currentDomainDefaultPasswordPolicy.PasswordHistoryCount
         ReversibleEncryptionEnabled = $currentDomainDefaultPasswordPolicy.ReversibleEncryptionEnabled
       }
+      Write-Progress -Activity 'Gathering AD Forest configuration' -Status "Get AD Critical Groups configuration" -PercentComplete 70 
       $groups = @('Enterprise Admins','Schema Admins') 
       $DomainConfig.HighGroups += foreach ($group in $groups){
         $groupMembers = Get-ADGroupMember -Identity $group @domainQueryParams 
@@ -176,9 +180,11 @@ function Get-POVFConfigurationAD {
     }
     #endregion
     #region sites properties
+    Write-Progress -Activity 'Gathering AD Forest configuration' -Status "Get AD Forest sites configuration" -PercentComplete 80
     $ForestConfig.Sites = @($currentADForest.Sites)
     #endregion
     #region Trust properties
+    Write-Progress -Activity 'Gathering AD Forest configuration' -Status "Get AD Forest trusts configuration" -PercentComplete 90
     $ForestConfig.Trusts += foreach ($trust in $currentTrusts) {
       @{
         Name = $trust.Name

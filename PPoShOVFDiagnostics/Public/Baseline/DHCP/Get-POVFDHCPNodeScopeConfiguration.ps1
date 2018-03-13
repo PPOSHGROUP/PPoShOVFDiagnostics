@@ -59,11 +59,23 @@ function Get-POVFDHCPNodeScopeConfiguration {
     }
     if($dhcpServerV4Scope){
         foreach($scope in $dhcpServerV4Scope) {
-          $scopeOptions = Invoke-Command -Session $POVFPSSession -ScriptBlock {
-            Get-DhcpServerv4OptionValue -ScopeId $USING:scope.scopeID
+          $exclusionRange = Invoke-Command -Session $POVFPSSession -ScriptBlock {
+            Get-DhcpServerv4ExclusionRange -ScopeId $USING:scope.ScopeID
           }
-          $resultOptions =@()
-          $resultOptions += foreach ($sOption in $scopeOptions) {
+          $exlusionsResults = @()
+          if($exclusionRange){
+            $exlusionsResults += foreach ($eRange in $exclusionRange) {
+              @{
+                StartRange = $eRange.StartRange.IPAddressToString
+                EndRange = $eRange.EndRange.IPAddressToString
+              }
+            }
+          }
+          $scopeOptions = Invoke-Command -Session $POVFPSSession -ScriptBlock {
+            Get-DhcpServerv4OptionValue -ScopeId $USING:scope.ScopeID
+          }
+          $optionsResults =@()
+          $optionsResults += foreach ($sOption in $scopeOptions) {
             [ordered]@{
               Name = $sOption.Name
               OptionID = $sOption.OptionID
@@ -80,7 +92,8 @@ function Get-POVFDHCPNodeScopeConfiguration {
             StartRange = $scope.StartRange.IPAddressToString
             EndRange = $scope.EndRange.IPAddressToString
             LeaseDuration = $scope.LeaseDuration.ToString()
-            ScopeOptions = $resultOptions
+            ScopeOptions = $optionsResults
+            ExclusionRange = $exlusionsResults
             NapEnable = $scope.NapEnable
             NapProfile = $scope.NapProfile
           }
