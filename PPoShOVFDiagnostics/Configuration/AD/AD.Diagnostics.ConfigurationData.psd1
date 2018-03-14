@@ -10,7 +10,7 @@
       DiagnosticFile = "AD.Simple.Configuration.Tests.ps1"
       Parameters = @('POVFConfiguration','POVFCredential')
       Configuration = 'NonNodeData'
-      Tag = @('Configuration')
+      Tag = @('Forest','Domain','Configuration')
     }
   )
   Comprehensive = @(

@@ -1,7 +1,7 @@
 @{
   Simple = @(
     @{
-      DiagnosticFile = "S2D.Simple.Cluster.Operational.Tests"
+      DiagnosticFile = "S2D.Simple.Cluster.Operational.Tests.ps1"
       Parameters = @('POVFConfiguration','POVFCredential')
       Configuration = 'NonNodeData'
       Tag = @('Operational')
