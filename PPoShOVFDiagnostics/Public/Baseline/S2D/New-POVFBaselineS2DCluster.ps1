@@ -33,6 +33,7 @@ function New-POVFBaselineS2DCluster {
   
   )
   process{
+    #region general variable initialization
     if($PSBoundParameters.ContainsKey('ClusterName')) { 
       $sessionParams = @{
         ComputerName = $ClusterName
@@ -49,6 +50,7 @@ function New-POVFBaselineS2DCluster {
     if($PSBoundParameters.ContainsKey('PSSession')){
       $POVFPSSession = $PSSession
     }
+    #endregion
     #region path variable initialization
     if(-not (Test-Path $POVFConfigurationFolder)        ) {
       [void](New-Item -Path $POVFConfigurationFolder -ItemType Directory)
@@ -64,11 +66,12 @@ function New-POVFBaselineS2DCluster {
     }
     #endregion
     
-    #Get Cluster
+    #region Get Cluster and generate files
     $ClusterConfig = Get-POVFConfigurationS2DCluster -PSSession $POVFPSSession
     $clusterFile = Join-Path -Path $nonNodeDataPath -childPath ('{0}.Cluster.Configuration.json' -f $ClusterConfig.Name)
     $ClusterConfig | ConvertTo-Json -Depth 99 | Out-File -FilePath $clusterFile
-    #Get Nodes
+    #endregion
+    #region Get Nodes and generate files 
     foreach ($node in $ClusterConfig.ClusterNodes) {
       if($PSBoundParameters.ContainsKey('ClusterName')) { 
         $sessionParams = @{
@@ -92,5 +95,6 @@ function New-POVFBaselineS2DCluster {
       $nodeConfig |  ConvertTo-Json -Depth 99 | Out-File -FilePath $nodeFile
       Remove-PSSession $POVFPSSessionNode.Name -ErrorAction SilentlyContinue  
     }
+    #endregion
   }
 }

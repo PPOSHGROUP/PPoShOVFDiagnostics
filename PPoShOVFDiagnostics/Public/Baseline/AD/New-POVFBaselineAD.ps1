@@ -25,15 +25,9 @@ function New-POVFBaselineAD {
       $queryParams.Credential = $Credential
     }
     #endregion
-    
     #region Get Configuration from environment
     $ForestConfig = Get-POVFConfigurationAD @queryParams
-    
-    #TODO
-    #Get DC configuration
-
     #endregion
-    
     #region path variable initialization
     if(-not (Test-Path $POVFConfigurationFolder)) {
       [void](New-Item -Path $POVFConfigurationFolder -ItemType Directory)
@@ -48,8 +42,9 @@ function New-POVFBaselineAD {
       [void](New-Item -Path $allNodesDataPath -ItemType Directory)
     }
     #endregion
-
+    #region Generate files
     $forestConfigFile = Join-Path -Path $nonNodeDataPath -childPath ('{0}.Configuration.json' -f $ForestConfig.Name)
     $ForestConfig | ConvertTo-Json -Depth 99 | Out-File -FilePath $forestConfigFile 
+    #endregion
   }
 }

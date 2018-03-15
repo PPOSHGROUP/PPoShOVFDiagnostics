@@ -33,6 +33,7 @@ function New-POVFBaselineDHCP {
       
   )
   process{
+    #region general variable initialization
     if($PSBoundParameters.ContainsKey('ComputerName')) { 
       $sessionParams = @{
         ComputerName = $ComputerName
@@ -49,6 +50,7 @@ function New-POVFBaselineDHCP {
     if($PSBoundParameters.ContainsKey('PSSession')){
       $POVFPSSession = $PSSession
     }
+    #endregion
     #region path variable initialization
     if(-not (Test-Path $POVFConfigurationFolder)) {
       [void](New-Item -Path $POVFConfigurationFolder -ItemType Directory)
@@ -68,7 +70,7 @@ function New-POVFBaselineDHCP {
     $dhcpFile = Join-Path -Path $nonNodeDataPath -childPath ('DHCP.{0}.Configuration.json' -f $DHCPConfig.Domain)
     $DHCPConfig | ConvertTo-Json -Depth 99 | Out-File -FilePath $dhcpFile
     #endregion
-    #Get Nodes configuration
+    #region Get Nodes configuration
     foreach ($node in $DHCPConfig.ServersInAD.DNSName) {
       if($PSBoundParameters.ContainsKey('ComputerName')) { 
         $sessionParams = @{
@@ -92,6 +94,7 @@ function New-POVFBaselineDHCP {
       $nodeConfig |  ConvertTo-Json -Depth 99 | Out-File -FilePath $nodeFile
       Remove-PSSession $POVFPSSessionNode.Name -ErrorAction SilentlyContinue  
     }
+    #endregion
     if(-not ($PSBoundParameters.ContainsKey('PSSession'))){
       Remove-PSSession -Name $POVFPSSession.Name -ErrorAction SilentlyContinue   
     }

@@ -99,7 +99,7 @@ function Get-POVFConfigurationAD {
     $currentADForest = Get-ADForest @queryParams
     Write-Progress -Activity 'Gathering AD Forest configuration' -Status "Get Forest {$($currentADForest.Name)} Environment configuration" -PercentComplete 5
     $currentTrusts = Get-ADTrust -filter * @queryParams 
-       
+     
     $ForestConfig.Name = $currentADForest.Name
     $ForestConfig.ForestMode = $currentADForest.ForestMode.ToString()
     $ForestConfig.RootDomain = $currentADForest.RootDomain

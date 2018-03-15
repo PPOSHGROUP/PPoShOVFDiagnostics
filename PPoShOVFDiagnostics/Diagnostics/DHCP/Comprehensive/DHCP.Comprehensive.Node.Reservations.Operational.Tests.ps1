@@ -10,16 +10,16 @@ Describe "Reservation Tests on Server - {$($POVFConfiguration.ComputerName)}" -T
       $freeIP= Invoke-Command -Session $POVFPSSession -ScriptBlock {
         Get-DhcpServerv4FreeIPAddress -ScopeId $USING:scopeId
       } 
-      it "Verify if any free IP is available in scope - {$scopeid}" {
+      it "Verify [host] if any free IP is available in scope - {$scopeid}" {
         $freeIP | Should -Not -BeNullOrEmpty
       }
-      it "Verify if it's possible to set reservation in {$scopeid} for IP {$freeIP} using MAC [0000000000AA]" {
+      it "Verify [host] if it's possible to set reservation in {$scopeid} for IP {$freeIP} using MAC [0000000000AA]" {
         Invoke-Command -Session $POVFPSSession -ScriptBlock { 
           Add-DhcpServerv4Reservation -IPAddress $USING:freeIP -ClientId '0000000000AA' -ScopeId $USING:scopeid 
           Get-DhcpServerv4Reservation  -IPAddress $USING:freeIP 
         } | Should -Be $true
       }
-      it "Verify if it's possible to remove reservation in {$scopeid} for IP {$freeIP}, MAC [0000000000AA]" {
+      it "Verify [host] if it's possible to remove reservation in {$scopeid} for IP {$freeIP}, MAC [0000000000AA]" {
         Invoke-Command -Session $POVFPSSession -ScriptBlock { 
           Remove-DhcpServerv4Reservation -ScopeId $USING:scopeid -ClientID '0000000000AA' 
           Get-DhcpServerv4Reservation  -IPAddress $USING:freeIP -ErrorAction SilentlyContinue
