@@ -13,19 +13,19 @@ function Get-POVFConfigurationDHCPGlobal {
     [ValidateNotNullOrEmpty()]
     [System.Management.Automation.PSCredential]
     $Credential,
-    
+
     [Parameter(Mandatory=$false,
     ParameterSetName='ComputerName')]
     [string]
     $ConfigurationName,
-  
+
     [Parameter(Mandatory,
     ParameterSetName='PSCustomSession')]
     [System.Management.Automation.Runspaces.PSSession]
     $PSSession
   )
   process{
-    if($PSBoundParameters.ContainsKey('ComputerName')) { 
+    if($PSBoundParameters.ContainsKey('ComputerName')) {
       $sessionParams = @{
         ComputerName = $ComputerName
         SessionName = "POVF-$ComputerName"
@@ -41,8 +41,8 @@ function Get-POVFConfigurationDHCPGlobal {
     if($PSBoundParameters.ContainsKey('PSSession')){
       $POVFPSSession = $PSSession
     }
-    #Invoke-Command -Session $POVFPSSession -ScriptBlock { 
-      $dhcpInAD = Get-DhcpServerInDC 
+    #Invoke-Command -Session $POVFPSSession -ScriptBlock {
+      $dhcpInAD = Get-DhcpServerInDC
       $dhcpConfig = [ordered]@{
         Domain = $env:USERDNSDOMAIN
         ServersInAD = @()
@@ -58,7 +58,7 @@ function Get-POVFConfigurationDHCPGlobal {
       $dhcpConfig
     #}
     if(-not ($PSBoundParameters.ContainsKey('PSSession'))){
-      Remove-PSSession -Name $POVFPSSession.Name -ErrorAction SilentlyContinue   
+      Remove-PSSession -Name $POVFPSSession.Name -ErrorAction SilentlyContinue
     }
   }
 }

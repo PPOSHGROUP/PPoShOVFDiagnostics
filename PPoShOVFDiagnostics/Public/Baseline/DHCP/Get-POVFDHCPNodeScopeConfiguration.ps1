@@ -1,38 +1,38 @@
 function Get-POVFDHCPNodeScopeConfiguration {
   [CmdletBinding()]
   param (
-          
+
     [Parameter(Mandatory,
     ParameterSetName='ComputerName')]
     [ValidateNotNullOrEmpty()]
     [System.String]
     $ComputerName,
-  
+
     [Parameter(Mandatory=$false)]
     [ValidateNotNullOrEmpty()]
     [System.String]
     $ScopeID,
-          
+
     [Parameter(Mandatory=$false,
     ParameterSetName='ComputerName')]
     [System.Management.Automation.PSCredential]
     $Credential,
-          
+
     [Parameter(Mandatory=$false,
     ParameterSetName='ComputerName')]
     [string]
     $ConfigurationName,
-        
+
     [Parameter(Mandatory,
     ParameterSetName='PSCustomSession')]
     [System.Management.Automation.Runspaces.PSSession]
     $PSSession
-        
-        
+
+
   )
   process{
     #region Variables set
-    if($PSBoundParameters.ContainsKey('ComputerName')) { 
+    if($PSBoundParameters.ContainsKey('ComputerName')) {
       $sessionParams = @{
         ComputerName = $ComputerName
         SessionName = "POVF-$ComputerName"
@@ -49,14 +49,16 @@ function Get-POVFDHCPNodeScopeConfiguration {
       $POVFPSSession = $PSSession
     }
     if($PSBoundParameters.ContainsKey('ScopeID')){
-      $queryParams = @{
-        ScopeID = $ScopeID
+      $dhcpServerV4Scope = Invoke-Command -Session $POVFPSSession -ScriptBlock {
+        Get-DhcpServerv4Scope -ScopeId $ScopeID
+      }
+    }
+    else {
+      $dhcpServerV4Scope = Invoke-Command -Session $POVFPSSession -ScriptBlock {
+        Get-DhcpServerv4Scope
       }
     }
     #endregion
-    $dhcpServerV4Scope = Invoke-Command -Session $POVFPSSession -ScriptBlock {   
-      Get-DhcpServerv4Scope @Using:queryParams
-    }
     if($dhcpServerV4Scope){
         foreach($scope in $dhcpServerV4Scope) {
           $exclusionRange = Invoke-Command -Session $POVFPSSession -ScriptBlock {
@@ -98,9 +100,9 @@ function Get-POVFDHCPNodeScopeConfiguration {
             NapProfile = $scope.NapProfile
           }
         }
-      }          
+      }
     if(-not ($PSBoundParameters.ContainsKey('PSSession'))){
-      Remove-PSSession -Name $POVFPSSession.Name -ErrorAction SilentlyContinue  
+      Remove-PSSession -Name $POVFPSSession.Name -ErrorAction SilentlyContinue
     }
   }
 }
